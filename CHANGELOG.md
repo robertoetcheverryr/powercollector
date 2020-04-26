@@ -1,6 +1,8 @@
 # v1.0.6 - 26/04/2020
 - Added handling of ctrl-c
 - Other minor enhancements
+- Enclosed main program in Try-Catch to catch ctrl-c termination
+- Added additional checks for input file
 
 # v1.0.5 - 25/04/2020
 
