@@ -216,19 +216,33 @@ def read_hmc_data(input_):
         logger.info('Attempting to open JSON File: ' + str(input_))
         try:
             hmc_ = HMC(json_in=json.loads(file.readline()))
+        except json.JSONDecodeError as e:
+            print(f'{e.msg} line {e.lineno} column {e.colno} (char {e.pos})')
+            logger.error(f'{e.msg} line {e.lineno} column {e.colno} (char {e.pos})')
+            if __debug__:
+                logger.exception(e)
+            return False
         except Exception as e:
             print('Invalid input file.')
             logger.error('Invalid input file.')
             if __debug__:
                 logger.exception(e)
+            return False
         else:
-            managed_systems_ = []
-            lines = file.readlines()
-            for line in lines:
-                managed_systems_.append(ManagedSystem(json_in=json.loads(line)))
-            print('HMC and Managed Systems loaded successfully.')
-            logger.info('HMC and Managed Systems loaded successfully.')
-            return hmc_, managed_systems_
+            try:
+                managed_systems_ = []
+                lines = file.readlines()
+                for index, line in enumerate(lines):
+                    managed_systems_.append(ManagedSystem(json_in=json.loads(line)))
+                print('HMC and Managed Systems loaded successfully.')
+                logger.info('HMC and Managed Systems loaded successfully.')
+                return hmc_, managed_systems_
+            except json.JSONDecodeError as e:
+                print(f'{e.msg} line {e.lineno + index} column {e.colno} (char {e.pos})')
+                logger.error(f'{e.msg} line {e.lineno + index} column {e.colno} (char {e.pos})')
+                if __debug__:
+                    logger.exception(e)
+                return False
 
 
 def check_host(hostname_):

@@ -499,8 +499,9 @@ try:
             logger.error('HMC Connection error - please check previous messages.')
             sys.exit(1)
     else:
-        hmc, managed_systems = read_hmc_data(args.input)
-        if hmc is None or managed_systems is None:
+        try:
+            hmc, managed_systems = read_hmc_data(args.input)
+        except Exception:
             print('Error loading file. Exiting now.')
             logger.info('Error loading file. Exiting now.')
             sys.exit(1)
@@ -512,5 +513,6 @@ try:
     # TODO: storwize collector - connect via cli - obtain snap - what else? - obtain partners and connect to them?
 except KeyboardInterrupt:
     # Cleanup?
-    print('powercollector killed by ctrl-C. Output may be invalid.')
+    logger.error('powercollector killed by ctrl-C. Output may be invalid.')
+    print('\npowercollector killed by ctrl-C. Output may be invalid.')
     pass
