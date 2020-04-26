@@ -24,7 +24,7 @@ A basic execution would be:
 powercollector.exe --hmc 10.0.0.1 --user hscroot --password abc1234
 ```
 
-##Optional-parameters
+## Optional-parameters
 Currently, powercollector supports the following parameters:
 ```
 optional arguments:
@@ -42,7 +42,7 @@ optional arguments:
                       current directory
 ```
 
-##Credits
+## Credits
 Uses HMC Scanner by Federico Vagnini (http://ibm.biz/hmcScanner)
 
 Uses oscollector by Leandro Villar
