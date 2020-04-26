@@ -1,0 +1,5 @@
+setuptools~=46.1.3
+loguru~=0.4.1
+paramiko~=2.7.1
+jsonizable~=1.0.4
+scp~=0.13.2
