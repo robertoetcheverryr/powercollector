@@ -113,7 +113,7 @@ class RemoteClient:
                 stdin, stdout, stderr = self.client.exec_command(command, timeout=timeout)
 
             response = stdout.readlines()
-            if response is None:
+            if not response:
                 logger.info(f'INPUT: {command} | OUTPUT: No output')
             for line in response:
                 line = line.replace('\n', '')
@@ -122,10 +122,10 @@ class RemoteClient:
         except socket.timeout as e:
             if __debug__:
                 logger.exception(e)
-            logger.error(f' INPUT: {command} raised a socket.timeout exception.')
+            logger.error(f' INPUT: {command} timed out.')
         except Exception as e:
             if __debug__:
                 logger.exception(e)
-            logger.error(f' INPUT: {command} raised a socket.timeout exception.')
+            logger.error(f' INPUT: {command} failed. Please check previous messages.')
             raise e
 
