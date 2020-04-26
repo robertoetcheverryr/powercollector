@@ -1,9 +1,9 @@
 # ****************************************************************************
 # * powercollector.sshclient                                                 *
-# * Module for ssh classes and functions, based on code from:
-# * Hackers and Slackers
+# * Module for ssh classes and functions, based on code from:                *
+# * Hackers and Slackers                                                     *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.5 2020/04/24                                                    *
+# * Ver: 1.0.6 2020/04/26                                                    *
 # ****************************************************************************
 
 import socket

@@ -1,3 +1,7 @@
+# v1.0.6 - 26/04/2020
+- Added handling of ctrl-c
+- Other minor enhancements
+
 # v1.0.5 - 25/04/2020
 
 - Added a lot of validations for inputs and required files
