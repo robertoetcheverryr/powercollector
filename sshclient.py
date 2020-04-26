@@ -3,7 +3,7 @@
 # * Module for ssh classes and functions, based on code from:                *
 # * Hackers and Slackers                                                     *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.6 2020/04/26                                                    *
+# * Ver: 1.0.7 2020/04/26                                                    *
 # ****************************************************************************
 
 import socket
@@ -128,4 +128,3 @@ class RemoteClient:
                 logger.exception(e)
             logger.error(f' INPUT: {command} failed. Please check previous messages.')
             raise e
-

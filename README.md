@@ -1,28 +1,47 @@
-# powercollector v1.0.6
+# powercollector v1.0.7
 Powercollector is a tool to collect information from an IBM HMC (Hardware Management Console), it's Managed Systems, their hardware configuration, and PowerVM configuration.
 
 It features JSON formatted output for the HMC, Managed Systems, and LPAR information, it also invokes HMC Scanner to obtain additional information and a pretty Excel file.
-Finally, it connects to each LPAR's RMC IP Address to run oscollector to obtain OS-level configuration and error data.
+Finally, it connects to each LPAR's RMC IP Address to run oscollector and obtain OS-level configuration and error data.
 
 __Guide:__
-* [Quickstart](#quickstart)
-* [Optional Parameters](#optional-parameters)
-* [Credits](#credits)
+* [Pre-requisites](#Pre-requisites)
+* [Quickstart](#Quickstart)
+* [Optional Parameters](#Optional-parameters)
+* [Author](#Author)
+* [License](#License)
+* [Acknowledgments](#Acknowledgments)
+
+## Pre-requisites
+
+To use the full functionality of powercollector you need:
+* Any modern Java JRE installed (e.g. https://adoptopenjdk.net)
+* HMC Scanner files (http://ibm.biz/hmcScanner)
+* oscollector.v.1.0.ksh or greater
+
+Place the HMC Scanner in a folder called HMCScanner and oscollector.vX.x.ksh in the same folder as powercollector.exe
 
 ## Quickstart
 
-To use the full functionality of powercollector you need to have Java installed, the HMCScanner binaries and oscollector.v.X.x.ksh, place the HMC Scanner binaries in a folder called HMCScanner and oscollector.vX.x.ksh in the same folder as powercollector.exe
-
-To collect all information invoke powercollector with the `--hmc`, `--user` and `--password` parameters.
+To do a full collection, invoke powercollector with the `--hmc`, `--user` and `--password` parameters.
 The user must have authority for each Managed System and their objects, it is recommended to use the hscroot user.
 
 After the initial HMC collection, the program will attempt to connect to each LPAR's RMC IP address and will prompt you for the credentials.
-The user must be root for AIX or padmin for VIOS
+The user must be root for AIX or padmin for VIOS.
 
 A basic execution would be:
 ```
 powercollector.exe --hmc 10.0.0.1 --user hscroot --password abc1234
 ```
+
+The output will be dependant on the invocation parameters:
+
+`--output` overrides any other parameter and will output to the specified folder.
+
+`--hmc` will create a folder with the format: HMC-CurrentDate in powercollector's current directory.
+
+`--input` will create a folder with the format: CurrentDate in the input file's directory.
+
 
 ## Optional-parameters
 Currently, powercollector supports the following parameters:
@@ -42,9 +61,20 @@ optional arguments:
                       current directory
 ```
 
-## Credits
+## Author
+
+* **Roberto Jose Etcheverry Romero**  - (https://github.com/robertoetcheverryr)
+
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+
+## Acknowledgments
 Uses HMC Scanner by Federico Vagnini (http://ibm.biz/hmcScanner)
 
 Uses oscollector by Leandro Villar
+
+sshclient based on work by Hackers and Slackers (https://hackersandslackers.com)
 
 "Icon made by Eucalyp from www.flaticon.com"

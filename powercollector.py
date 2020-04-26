@@ -3,7 +3,7 @@
 # * This program collects HMC, Managed System, LPAR and OS data from         *
 # * IBM Power systems.                                                       *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.6 2020/04/26                                                    *
+# * Ver: 1.0.7 2020/04/26                                                    *
 # ****************************************************************************
 
 # Import common classes and functions from common.py
@@ -108,77 +108,92 @@ def save_os_level_data(managed_systems_, base_dir_, output_dir_, today_):
     password = 'abc123'
     print('LPAR OS-level collection started.')
     logger.info('LPAR OS-level collection started.')
-    for system in managed_systems_:
-        print('Collection for System: ' + system.name + '\'s LPARs started.')
-        logger.info('Collection for System: ' + system.name + '\'s LPARs started.')
-        for lpar in system.partition_list:
-            failed_lpars = []
-            if 'VIOS' in lpar.os or 'AIX' in lpar.os:
-                if 'Running' not in lpar.state:
+    failed_lpars = []
+    for system_ in managed_systems_:
+        if not system_.partition_list:
+            print('No LPARs defined for System: ' + system_.name)
+            logger.info('No LPARs defined for System: ' + system_.name)
+            continue
+        print('LPAR OS-level collection for System: ' + system_.name + ' started.')
+        logger.info('LPAR OS-level collection for System: ' + system_.name + ' started.')
+        for lpar_ in system_.partition_list:
+            if 'VIOS' in lpar_.os or 'AIX' in lpar_.os:
+                if 'Running' not in lpar_.state:
                     # continue halts the current loop and moves to the next iterable, in this case, next lpar
-                    failed_lpars.append(lpar)
+                    failed_lpar = lpar_
+                    failed_lpar.name = system_.name + ' ' + failed_lpar.name
+                    failed_lpars.append(failed_lpar)
                     continue
-                print('LPAR: ' + lpar.name + '\'s OS-level collection started.')
-                logger.info('LPAR: ' + lpar.name + '\'s OS-level collection started.')
-                if lpar.rmc_ip == '':
+                print('LPAR: ' + lpar_.name + '\'s OS-level collection started.')
+                logger.info('LPAR: ' + lpar_.name + '\'s OS-level collection started.')
+                if lpar_.rmc_ip == '':
                     # If the LPAR is Running but doesn't have an RMC IP Address, we cannot connect and something is
                     # wrong with the LPAR.
-                    print('LPAR: ' + lpar.name + 'is an AIX or VIOS LPAR but doesn\'t have an RMC IP address. Please '
-                                                 'run oscollector manually and check rmc services.')
-                    logger.error('LPAR: ' + lpar.name + 'is an AIX or VIOS LPAR but doesn\'t have an RMC IP address. '
-                                                        'Please run oscollector manually and check rmc services.')
-                    failed_lpars.append(lpar)
+                    print('LPAR: ' + lpar_.name + 'is an AIX or VIOS LPAR but doesn\'t have an RMC IP address. Please '
+                                                  'run oscollector manually and check rmc services.')
+                    logger.error('LPAR: ' + lpar_.name + 'is an AIX or VIOS LPAR but doesn\'t have an RMC IP address. '
+                                                         'Please run oscollector manually and check rmc services.')
+                    failed_lpar = lpar_
+                    failed_lpar.name = system_.name + ' ' + failed_lpar.name
+                    failed_lpars.append(failed_lpar)
                     continue
-                if not check_host(lpar.rmc_ip):
+                if not check_host(lpar_.rmc_ip):
                     # If the rmc_ip is unreachable, something is wrong at the networking level
                     # since the HMC did reach it.
-                    print('Error during connection to LPAR: ' + lpar.name + ', please check log file and run '
-                                                                            'oscollector manually')
-                    logger.error('Error during connection to LPAR: ' + lpar.name + ', please check log file and run '
-                                                                                   'oscollector manually')
-                    failed_lpars.append(lpar)
+                    print('Error during connection to LPAR: ' + lpar_.name + ', please check log file and run '
+                                                                             'oscollector manually')
+                    logger.error('Error during connection to LPAR: ' + lpar_.name + ', please check log file and run '
+                                                                                    'oscollector manually')
+                    failed_lpar = lpar_
+                    failed_lpar.name = system_.name + ' ' + failed_lpar.name
+                    failed_lpars.append(failed_lpar)
                     continue
                 for attempt in range(5):
                     print('Please input username and password or press enter to use the stored value.')
                     # Ask for input, if the input is empty, use the current value
-                    username = input('Username for LPAR: ' + lpar.name + ' (' + username + '): ') or username
+                    username = input('Username for LPAR: ' + lpar_.name + ' (' + username + '): ') or username
                     password = input('Password for user ' + username + ' (' + password + '): ') or password
                     try:
-                        lpar_ssh = RemoteClient(host=lpar.rmc_ip, user=username, password=password, remote_path='.')
+                        lpar_ssh = RemoteClient(host=lpar_.rmc_ip, user=username, password=password, remote_path='.')
                         lpar_ssh.execute_command('hostname', 10)
                     except AuthenticationException:
-                        logger.info('Authentication error. Retrying connection with LPAR:' + lpar.name +
+                        if attempt == 4:
+                            failed_lpar = lpar_
+                            failed_lpar.name = system_.name + ' ' + failed_lpar.name
+                            failed_lpars.append(failed_lpar)
+                            continue
+                        logger.info('Authentication error. Retrying connection with LPAR:' + lpar_.name +
                                     ', attempt ' + str(attempt + 2) + ' of 5')
-                        print('Authentication error. Retrying connection with LPAR ' + lpar.name +
+                        print('Authentication error. Retrying connection with LPAR ' + lpar_.name +
                               ', attempt ' + str(attempt + 2) + ' of 5')
                     except Exception as e:
                         # Any other exception, abort connection and move to next LPAR
-                        print('Error during connection to LPAR: ' + lpar.name +
+                        print('Error during connection to LPAR: ' + lpar_.name +
                               ', please check log file and run oscollector manually on the LPAR.')
                         if __debug__:
                             logger.exception(e)
-                        logger.error('Error during connection to LPAR: ' + lpar.name +
+                        logger.error('Error during connection to LPAR: ' + lpar_.name +
                                      ', please check previous messages and run oscollector manually on the LPAR.')
-                        failed_lpars.append(lpar)
+                        failed_lpars.append(lpar_)
                         continue
                     # Fun Fact: Try Except blocks also have an else condition, it's triggered when it exits cleanly.
                     else:
                         # Once we got a connection to the LPAR, send the file, exec the script and retrieve the file
                         try:
-                            output_file = system.name + '-' + lpar.name + '-' + today_
+                            output_file = system_.name + '-' + lpar_.name + '-' + today_
                             lpar_ssh.upload_file(base_dir_ + '\\' + oscollector)
-                            if 'VIOS' in lpar.os:
+                            if 'VIOS' in lpar_.os:
                                 lpar_ssh.execute_command('chmod 777 ' + oscollector, 30, vios=True)
                                 response_ = lpar_ssh.execute_command('./' + oscollector, 60, vios=True)
                             else:
                                 lpar_ssh.execute_command('chmod 777 ' + oscollector, 30)
                                 response_ = lpar_ssh.execute_command('./' + oscollector, 60)
 
-                            for line in response_:
-                                if 'genero el archivo' in line:
+                            for line_ in response_:
+                                if 'genero el archivo' in line_:
                                     # noinspection PyPep8
                                     regex = re.compile('vo .*\.tar', )
-                                    old_name = regex.search(line)
+                                    old_name = regex.search(line_)
                                     break
                             old_name = old_name.group(0).replace('vo ', '')
                             lpar_ssh.execute_command('mv ' + old_name + ' ' + output_file + '.tar')
@@ -190,26 +205,35 @@ def save_os_level_data(managed_systems_, base_dir_, output_dir_, today_):
                             lpar_ssh.execute_command('rm ' + output_file + '.tar', 30)
                         except Exception as e:
                             lpar_ssh.disconnect()
-                            print('Error encountered during transfer or execution of script on LPAR: ' + lpar.name +
+                            print('Error encountered during transfer or execution of script on LPAR: ' + lpar_.name +
                                   ', please check log file and run oscollector manually on the LPAR.')
                             if __debug__:
                                 logger.exception(e)
                             logger.error(
-                                'Error encountered during transfer or execution of script on LPAR: ' + lpar.name +
+                                'Error encountered during transfer or execution of script on LPAR: ' + lpar_.name +
                                 ', please check previous messages and run oscollector manually on the LPAR.')
-                            failed_lpars.append(lpar)
+                            failed_lpars.append(lpar_)
                             break
                         else:
                             lpar_ssh.disconnect()
-                            print('LPAR: ' + lpar.name + '\'s OS-level collection completed succesfully')
-                            logger.info('LPAR: ' + lpar.name + '\'s OS-level collection completed succesfully')
+                            print('LPAR: ' + lpar_.name + '\'s OS-level collection completed succesfully')
+                            logger.info('LPAR: ' + lpar_.name + '\'s OS-level collection completed succesfully')
                             break
                 # Another Fun Fact: For loops ALSO have else conditions, this one is triggered on loop reaching the end.
                 else:
-                    print('Error during connection to LPAR: ' + lpar.name + ', please check log file.')
-                    logger.error('Error during connection to LPAR: ' + lpar.name + ', please check previous messages.')
-        print('Collection for System: ' + lpar.name + '\'s LPAR\'s OS-level data completed.')
-        logger.info('Collection for System: ' + lpar.name + '\'s LPAR\'s OS-level data completed.')
+                    print('Error during connection to LPAR: ' + lpar_.name + ', please check log file.')
+                    logger.error('Error during connection to LPAR: ' + lpar_.name + ', please check previous messages.')
+                print('LPAR: ' + lpar_.name + '\'s OS-level collection ended.')
+                logger.info('LPAR: ' + lpar_.name + '\'s OS-level collection ended.')
+        print('LPAR OS-level collection for System: ' + system_.name + ' completed.')
+        logger.info('LPAR OS-level collection for System: ' + system_.name + ' completed.')
+    if failed_lpars:
+        print('Unable to collect OS-level data for some LPARs, please' +
+              ' run oscollector manually on each one. Check the log file for the LPAR list.')
+        logger.info('Unable to collect OS-level data for the following LPARs, please' +
+                    ' run oscollector manually on each one.')
+    for lpar_ in failed_lpars:
+        logger.info(f'System LPAR: {lpar_.name} rmc_ip: {lpar_.rmc_ip} state: {lpar_.state}')
     print('LPAR OS-level collection completed.')
     logger.info('LPAR OS-level collection completed.')
     return True
@@ -250,7 +274,7 @@ try:
             parser.print_help()
             sys.exit(0)
 
-    print('powercollector version 1.0.6')
+    print('powercollector version 1.0.7')
     # Create folder for output and set folder variables
     # now is an object, we turn that into a string with a format of our choosing
     today = datetime.now().strftime("%Y%m%d-%H-%M")
@@ -267,16 +291,32 @@ try:
     else:
         base_dir = str(Path(__file__).resolve().parent)
 
-    # If the user specified the output dir, set it. Otherwise set it to the exe or script's location.
-    if args.output is None:
-        output_dir = base_dir
+    # If the user specified an input file, set the output directory to the input file's. Otherwise create a new one.
+
+    # If no output nor input file are specified, use the base dir for output
+    if args.output:
+        output_dir = str(args.output)
+    elif args.input:
+        output_dir = str(args.input.parent)
     else:
-        if os.path.exists(args.output):
-            output_dir = str(args.output)
+        output_dir = base_dir + '\\' + args.hmc + '-' + today
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+    try:
+        # Try to write to the specified directory, if it fails default to the exe's dir.
+        dir_test = open(output_dir + '\\' + 'temp.file', 'w+')
+    except Exception as e:
+        print('Output directory is invalid. Defaulting to .exe location: ' + base_dir)
+        logger.error('Output directory is invalid. Defaulting to .exe location: ' + base_dir)
+        if args.hmc:
+            output_dir = base_dir + '\\' + args.hmc + '-' + today
         else:
-            print('Output directory is invalid. Defaulting to .exe location: ' + base_dir)
-            logger.error('Output directory is invalid. Defaulting to .exe location: ' + base_dir)
-            output_dir = base_dir
+            output_dir = base_dir + '\\' + today
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+    else:
+        dir_test.close()
+        os.remove(output_dir + '\\' + 'temp.file')
 
     # If the user specified the HMC Scanner dir, set it. Otherwise set it to the exe or script's location + HMCScanner.
     if args.hmcscanpath is None:
@@ -284,23 +324,14 @@ try:
     else:
         hmc_scan_path = str(args.hmcscanpath)
 
-    # If the user specified an input file, set the output directory to the input file's. Otherwise create a new one.
-    if args.hmc:
-        output_dir += '\\' + args.hmc + '-' + today
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir, exist_ok=True)
-    else:
-        output_dir = str(args.input.parent)
-
     # Start main logging
-
     # logger.add(sys.stderr, level="ERROR")
     print('Base directory: ' + base_dir)
     print('Output directory: ' + output_dir)
-    logger.add(output_dir + '\\' + 'powercollector-Main-log_{time:YYYY-MM-DD}.log',
+    logger.add(output_dir + '\\' + 'powercollector-log_{time:YYYY-MM-DD}.log',
                format="{time} | {level} | {module}:{function} | {message}",
                level="INFO")
-    logger.info('powercollector version 1.0.6')
+    logger.info('powercollector version 1.0.7')
     logger.info('Base directory: ' + base_dir)
     logger.info('Output directory: ' + output_dir)
 

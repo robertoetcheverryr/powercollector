@@ -1,7 +1,14 @@
+# v1.0.7 - 26/04/2020
+
+- Added listing of non-collected LPARs for manual collection
+- Added more validation and fixed some error messages
+- Improved README.md
+
 # v1.0.6 - 26/04/2020
-- Added handling of ctrl-c
+
+- Added handling of `ctrl-c`
 - Other minor enhancements
-- Enclosed main program in Try-Catch to catch ctrl-c termination
+- Enclosed main program in Try-Catch to catch `ctrl-c` termination
 - Added additional checks for input file
 
 # v1.0.5 - 25/04/2020

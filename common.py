@@ -2,7 +2,7 @@
 # * powercollector.common                                                    *
 # * Module for common classes and functions                                  *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.6 2020/04/26                                                    *
+# * Ver: 1.0.7 2020/04/26                                                    *
 # ****************************************************************************
 
 # Import logger for the main log file
@@ -191,9 +191,9 @@ def save_hmc_data(hmc_src_, hmc_, managed_systems_, output_dir_):
         # HMC object is correct
         if len(read_managed_systems) == len(managed_systems_):
             # Both objects are same size
-            for i in range(len(managed_systems_)):
+            for index, system in enumerate(managed_systems_):
                 # noinspection PyUnresolvedReferences
-                if read_managed_systems[i].write() != managed_systems_[i].write():
+                if read_managed_systems[index].write() != system.write():
                     print('Failure checking file consistency.')
                     logger.error('Failure checking file consistency.')
                     return False
