@@ -55,6 +55,9 @@ class RemoteClient:
                 if __debug__:
                     logger.exception(error)
                 raise error
+            except Exception as error:
+                logger.exception('Unexpected error during connection:' + error)
+                raise error
         return self.client
 
     def disconnect(self):
