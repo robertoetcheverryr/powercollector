@@ -1,16 +1,17 @@
-# powercollector v1.0.7
+# powercollector v1.0.8
 Powercollector is a tool to collect information from an IBM HMC (Hardware Management Console), it's Managed Systems, their hardware configuration, and PowerVM configuration.
 
 It features JSON formatted output for the HMC, Managed Systems, and LPAR information, it also invokes HMC Scanner to obtain additional information and a pretty Excel file.
 Finally, it connects to each LPAR's RMC IP Address to run oscollector and obtain OS-level configuration and error data.
 
 __Guide:__
-* [Pre-requisites](#Pre-requisites)
-* [Quickstart](#Quickstart)
-* [Optional Parameters](#Optional-parameters)
-* [Author](#Author)
-* [License](#License)
-* [Acknowledgments](#Acknowledgments)
+* [Pre-requisites](#pre-requisites)
+* [Quickstart](#quickstart)
+* [Optional Parameters](#optional-parameters)
+* [Auxiliary programs](#auxiliary-programs)
+* [Author](#author)
+* [License](#license)
+* [Acknowledgments](#acknowledgments)
 
 ## Pre-requisites
 
@@ -44,6 +45,7 @@ The output will be dependant on the invocation parameters:
 
 
 ## Optional-parameters
+
 Currently, powercollector supports the following parameters:
 ```
 optional arguments:
@@ -61,6 +63,17 @@ optional arguments:
                       current directory
 ```
 
+## Auxiliary-programs
+
+oscollectorHelper is a simple tool to either specify an LPAR, user and password or  read a JSON file with an LPAR list, run oscollector on each one and obtain their OS-level data.
+
+Examples:
+```
+oscollectorHelper.exe --lpar 10.0.0.1  --user root --password password
+or
+oscollectorHelper.exe --input lparlist.json
+```
+
 ## Author
 
 * **Roberto Jose Etcheverry Romero**  - (https://github.com/robertoetcheverryr)
@@ -68,9 +81,10 @@ optional arguments:
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
+
 Uses HMC Scanner by Federico Vagnini (http://ibm.biz/hmcScanner)
 
 Uses oscollector by Leandro Villar

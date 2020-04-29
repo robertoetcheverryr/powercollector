@@ -1,3 +1,11 @@
+# v1.0.8 - 28/04/2020
+
+- Extensive refactoring to enable auxiliary modules like oscollectorHelper
+- Initial release of oscollectorHelper
+- Solved bugs related to old HMC versions not having all the attributes or parameters for some commands
+- Improved code flow using safeguard clauses instead of nesting
+- Added output of non-collected LPARs, including powered off, Linux and IBM i LPARs
+
 # v1.0.7 - 26/04/2020
 
 - Added listing of non-collected LPARs for manual collection

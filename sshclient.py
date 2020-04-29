@@ -3,7 +3,7 @@
 # * Module for ssh classes and functions, based on code from:                *
 # * Hackers and Slackers                                                     *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.7 2020/04/26                                                    *
+# * Ver: 1.0.8 2020/04/26                                                    *
 # ****************************************************************************
 
 import socket
@@ -63,25 +63,19 @@ class RemoteClient:
         self.client.close()
         self.scp.close()
 
-    def bulk_upload(self, files):
-        # Upload multiple files to a remote directory.
-        # :param files: List of strings representing file paths to local files.
-
-        self.conn = self._connect()
-        uploads = [self.upload_file(file) for file in files]
-        logger.info(f'Finished uploading {len(uploads)} files to {self.remote_path} on {self.host}')
-
     def upload_file(self, file):
         # Upload a single file to a remote directory.
         try:
+            logger.info(f'Attempting to upload {file} to {self.remote_path}')
             self.scp.put(file,
                          recursive=True,
                          remote_path=self.remote_path)
         except SCPException as error:
             if __debug__:
                 logger.exception(error)
+            logger.error('SCP ERROR: ' + str(error))
             raise error
-        finally:
+        else:
             logger.info(f'Uploaded {file} to {self.remote_path}')
 
     def download_file(self, file, path='.'):
@@ -111,7 +105,6 @@ class RemoteClient:
                 stdin.flush()
             else:
                 stdin, stdout, stderr = self.client.exec_command(command, timeout=timeout)
-
             response = stdout.readlines()
             if not response:
                 logger.info(f'INPUT: {command} | OUTPUT: No output')
@@ -123,6 +116,7 @@ class RemoteClient:
             if __debug__:
                 logger.exception(e)
             logger.error(f' INPUT: {command} timed out.')
+            raise e
         except Exception as e:
             if __debug__:
                 logger.exception(e)

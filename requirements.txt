@@ -3,3 +3,4 @@ loguru~=0.4.1
 paramiko~=2.7.1
 jsonizable~=1.0.4
 scp~=0.13.2
+colorama~=0.4.3

@@ -2,7 +2,7 @@
 # * powercollector.common                                                    *
 # * Module for common classes and functions                                  *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.7 2020/04/26                                                    *
+# * Ver: 1.0.8 2020/04/26                                                    *
 # ****************************************************************************
 
 # Import logger for the main log file
@@ -11,6 +11,9 @@ from loguru import logger
 # Import subprocess to run external processes
 import subprocess
 
+# Import os to use file functions
+import os
+
 # Import Jsonizable to store and read the data
 from jsonizable import Jsonizable
 import json
@@ -18,8 +21,12 @@ import json
 # Import re to work with regular expressions
 import re
 
-# Import socket to do lowlevel networking
+# Import socket to do low-level networking
 import socket
+# Import the RemoteClient class from the sshclient file
+from paramiko import AuthenticationException
+
+from sshclient import RemoteClient
 
 
 # Define LPAR class
@@ -43,10 +50,10 @@ class LPAR(Jsonizable):
         schema = {
             "name": str,
             # Is it worth it to get type-happy with things like ID?
-            "id": str,
-            "os": str,
+            "id?": str,
+            "os?": str,
             "rmc_ip": str,
-            "state": str,
+            "state?": str,
         }
 
 
@@ -164,6 +171,10 @@ class HMC(Jsonizable):
         }
 
 
+def print_red(text):
+    print(f"\033[91m{text}\033[00m")
+
+
 def check_java():
     # Check for java and return the output
     outputs = subprocess.run('java -version', capture_output=True, text=True)
@@ -175,55 +186,59 @@ def check_java():
         return result.string
 
 
-def save_hmc_data(hmc_src_, hmc_, managed_systems_, output_dir_):
+def save_hmc_data(hmc_src, hmc, managed_systems, output_dir):
     # File format: HMC object first then ManagedSystem objects
-    output_file = output_dir_ + '\\' + hmc_src_ + '-SystemsManagedByHMC-' + hmc_.hostname + '.json'
+    output_file = output_dir + '\\' + hmc_src + '-SystemsManagedByHMC-' + hmc.hostname + '.json'
     with open(output_file, "w+") as file:
         # Write HMC's JSON
-        file.write(json.dumps(hmc_.write()) + '\n')
+        file.write(json.dumps(hmc.write()) + '\n')
         # Write Managed Systems' JSON
-        for system_ in managed_systems_:
+        for system_ in managed_systems:
             file.write(json.dumps(system_.write()) + '\n')
     print('Reading written file for consistency.')
     read_hmc, read_managed_systems = read_hmc_data(output_file)
     # noinspection PyUnresolvedReferences
-    if read_hmc.write() == hmc_.write():
+    if read_hmc.write() == hmc.write():
         # HMC object is correct
-        if len(read_managed_systems) == len(managed_systems_):
+        if len(read_managed_systems) == len(managed_systems):
             # Both objects are same size
-            for index, system in enumerate(managed_systems_):
+            for index, system in enumerate(managed_systems):
                 # noinspection PyUnresolvedReferences
                 if read_managed_systems[index].write() != system.write():
-                    print('Failure checking file consistency.')
+                    print_red('Failure checking file consistency.')
                     logger.error('Failure checking file consistency.')
                     return False
             print('File is consistent.')
             logger.info('File is consistent.')
             return True
         else:
-            print('Failure checking file consistency.')
+            print_red('Failure checking file consistency.')
             logger.error('Failure checking file consistency.')
             return False
     else:
-        print('Failure checking file consistency.')
+        print_red('Failure checking file consistency.')
         logger.error('Failure checking file consistency.')
         return False
 
 
-def read_hmc_data(input_):
-    with open(input_, "r") as file:
-        print('Attempting to open JSON File: ' + str(input_))
-        logger.info('Attempting to open JSON File: ' + str(input_))
+def read_hmc_data(input_file):
+    """
+    : Reads a powercollector JSON file to populate and return HMC and ManagedSystems objects
+    """
+    with open(input_file, "r") as file:
+        print('Attempting to open JSON File: ' + str(input_file))
+        logger.info('Attempting to open JSON File: ' + str(input_file))
         try:
             hmc_ = HMC(json_in=json.loads(file.readline()))
         except json.JSONDecodeError as e:
-            print(f'{e.msg} line {e.lineno} column {e.colno} (char {e.pos})')
+            print_red(f'{e.msg} line {e.lineno} column {e.colno} (char {e.pos})')
             logger.error(f'{e.msg} line {e.lineno} column {e.colno} (char {e.pos})')
+            # noinspection PyUnreachableCode
             if __debug__:
                 logger.exception(e)
             return False
         except Exception as e:
-            print('Invalid input file.')
+            print_red('Invalid input file.')
             logger.error('Invalid input file.')
             if __debug__:
                 logger.exception(e)
@@ -238,28 +253,296 @@ def read_hmc_data(input_):
                 logger.info('HMC and Managed Systems loaded successfully.')
                 return hmc_, managed_systems_
             except json.JSONDecodeError as e:
-                print(f'{e.msg} line {e.lineno + index} column {e.colno} (char {e.pos})')
+                print_red(f'{e.msg} line {e.lineno + index} column {e.colno} (char {e.pos})')
                 logger.error(f'{e.msg} line {e.lineno + index} column {e.colno} (char {e.pos})')
                 if __debug__:
                     logger.exception(e)
                 return False
 
 
-def check_host(hostname_):
+def check_host(hostname):
     """
     :This function checks if a provided hostname is reachable.
     :Returns True if the host is reachable and False if not.
     :Logs to the console and logfile any problems.
     """
     try:
-        host = socket.gethostbyname(hostname_)
+        host = socket.gethostbyname(hostname)
         subprocess.run('ping -n 1 ' + host, check=True, stdout=subprocess.DEVNULL)
     except subprocess.CalledProcessError:
-        print('Host: ' + hostname_ + ' is not reachable.')
-        logger.error('Host: ' + hostname_ + ' is not reachable.')
+        print_red('Host: ' + hostname + ' is not reachable.')
+        logger.error('Host: ' + hostname + ' is not reachable.')
         return False
     except socket.error:
-        print('Host: ' + hostname_ + ' is not resolvable.')
-        logger.error('Host: ' + hostname_ + ' is not resolvable.')
+        print_red('Host: ' + hostname + ' is not resolvable.')
+        logger.error('Host: ' + hostname + ' is not resolvable.')
         return False
     return True
+
+
+def save_os_level_data_for_sys(managed_systems, base_dir, output_dir, today, oscollector_path=None):
+    # Connect to each partition to run the collection script
+    print('LPAR OS-level collection started.')
+    logger.info('LPAR OS-level collection started.')
+    non_collected_lpars = []
+    if oscollector_path is None:
+        oscollector_path = base_dir
+    oscollector = get_oscollector(oscollector_path)
+    for system in managed_systems:
+        if not system.partition_list:
+            print_red('No LPARs defined for System: ' + system.name)
+            logger.info('No LPARs defined for System: ' + system.name)
+            continue
+        print('LPAR OS-level collection for System: ' + system.name + ' started.')
+        logger.info('LPAR OS-level collection for System: ' + system.name + ' started.')
+        for lpar in system.partition_list:
+            print('LPAR: ' + lpar.name + '\'s OS-level collection started.')
+            logger.info('LPAR: ' + lpar.name + '\'s OS-level collection started.')
+            if not save_lpar_os_data(lpar=lpar, oscollector=oscollector, path_to_oscollector=base_dir,
+                                     output_path=output_dir, system_name=system.name, today=today):
+                non_collected_lpar = lpar
+                non_collected_lpar.name = system.name + ' ' + non_collected_lpar.name
+                non_collected_lpars.append(non_collected_lpar)
+            print('LPAR: ' + lpar.name + '\'s OS-level collection ended.')
+            logger.info('LPAR: ' + lpar.name + '\'s OS-level collection ended.')
+        print('LPAR OS-level collection for System: ' + system.name + ' completed.')
+        logger.info('LPAR OS-level collection for System: ' + system.name + ' completed.')
+    if non_collected_lpars:
+        print_red('Unable to collect OS-level data for some LPARs, please' +
+                  ' run oscollector manually on each one. Check the log file for the LPAR list.')
+        logger.error('Unable to collect OS-level data for the following LPARs, please' +
+                     ' run oscollector manually on each one.')
+        for lpar in non_collected_lpars:
+            logger.info(f'System LPAR: {lpar.name} rmc_ip: {lpar.rmc_ip} state: {lpar.state}')
+        with open(output_dir + '\\' + 'NonCollectedLPARList.json', "w+") as file:
+            # Write HMC's JSON
+            for lpar in non_collected_lpars:
+                file.write(json.dumps(lpar.write()) + '\n')
+            logger.info('List of LPARs that require manual collection written to file: ' + output_dir + '\\' +
+                        'NonCollectedLPARList.json')
+    print('LPAR OS-level collection completed.')
+    logger.info('LPAR OS-level collection completed.')
+    return True
+
+
+def get_oscollector(path_to_oscollector):
+    """
+    : This function takes a path and returns the name of the latest oscollector
+    """
+    # Check for oscollector.v.X.X.ksh
+    if not os.path.exists(path_to_oscollector):
+        logger.error('Path: ' + str(path_to_oscollector) + ' is not a path.')
+        return False
+    oscollector = None
+    regex = re.compile(r'oscollector\..*\.ksh')
+    for file in os.listdir(path_to_oscollector):
+        if regex.search(file):
+            if oscollector:
+                # oscollector files are oscollector.vX.x.ksh
+                # remove everything but the X.x and we can just cast it to float to test
+                curr_ver = oscollector.replace('oscollector.v', '')
+                curr_ver = curr_ver.replace('.ksh', '')
+                new_ver = file.replace('oscollector.v', '')
+                new_ver = new_ver.replace('.ksh', '')
+                if float(new_ver) > float(curr_ver):
+                    oscollector = file
+            else:
+                oscollector = file
+    if oscollector:
+        logger.info('Found oscollector file: ' + oscollector)
+        return oscollector
+    else:
+        logger.error('oscollector not found.')
+        return False
+
+
+def save_lpar_os_data(lpar, oscollector, path_to_oscollector, output_path, today, password=None, username=None,
+                      system_name=''):
+    """
+    : get lpar os data takes the lpar, oscollector
+    """
+    # Safeguard clauses and username/password setup
+    if 'Running' not in lpar.state:
+        # continue halts the current loop and moves to the next iterable, in this case, next lpar
+        print_red('LPAR: ' + lpar.name + ' LPAR must be running to be collected. Please '
+                                         'run oscollector manually if needed.')
+        logger.error('LPAR: ' + lpar.name + ' must be running to be collected. Please '
+                                            'run oscollector manually if needed.')
+        return False
+    if 'OS/400' in lpar.os:
+        print_red('LPAR: ' + lpar.name + ' is running IBM i, cannot run oscollector.')
+        logger.info('LPAR: ' + lpar.name + ' is running IBM i, cannot run oscollector.')
+        return False
+    if 'Linux' in lpar.os:
+        print_red('LPAR: ' + lpar.name + ' is running Linux, cannot run oscollector.')
+        logger.info('LPAR: ' + lpar.name + ' is running Linux, cannot run oscollector.')
+        return False
+    if 'Unknown' in lpar.os:
+        print_red('The HMC doesn\'t know LPAR: ' + lpar.name + '\'s Operating System, cannot run oscollector')
+        logger.info('The HMC doesn\'t know LPAR: ' + lpar.name + '\'s Operating System, cannot run oscollector')
+        return False
+    if lpar.rmc_ip == '':
+        # If the LPAR is Running but doesn't have an RMC IP Address, we cannot connect and something is
+        # wrong with the LPAR.
+        print_red('LPAR: ' + lpar.name + 'is an AIX or VIOS LPAR but doesn\'t have an RMC IP address. Please '
+                                         'run oscollector manually and check rmc services.')
+        logger.error('LPAR: ' + lpar.name + 'is an AIX or VIOS LPAR but doesn\'t have an RMC IP address. '
+                                            'Please run oscollector manually and check rmc services.')
+        return False
+    if not check_host(lpar.rmc_ip):
+        # If the rmc_ip is unreachable, something is wrong at the networking level
+        # since the HMC did reach it.
+        print_red('Error during connection to LPAR: ' + lpar.name + ', please check log file and run '
+                                                                    'oscollector manually')
+        logger.error('Error during connection to LPAR: ' + lpar.name + ', please check log file and run '
+                                                                       'oscollector manually')
+        return False
+    # If no user/pass were provided, set defaults.
+    if 'VIOS' in lpar.os:
+        username = username or 'padmin'
+        password = password or 'padmin'
+    if 'AIX' in lpar.os:
+        username = username or 'root'
+        password = password or 'password'
+    for attempt in range(5):
+        print('Please input username and password or press enter to use the proposed value.')
+        # Ask for input, if the input is empty, use the current value
+        username = input('Username for LPAR: ' + lpar.name + ' (' + username + '): ') or username
+        password = input('Password for user ' + username + ' (' + password + '): ') or password
+        try:
+            lpar_ssh = RemoteClient(host=lpar.rmc_ip, user=username, password=password, remote_path='.')
+            lpar_ssh.execute_command('hostname', 10)
+        except AuthenticationException:
+            if attempt == 4:
+                return False
+            logger.info('Authentication error. Retrying connection with LPAR:' + lpar.name +
+                        ', attempt ' + str(attempt + 2) + ' of 5')
+            print_red('Authentication error. Retrying connection with LPAR ' + lpar.name +
+                      ', attempt ' + str(attempt + 2) + ' of 5')
+        except Exception as e:
+            # Any other exception, abort connection and move to next LPAR
+            print_red('Error during connection to LPAR: ' + lpar.name +
+                      ', please check log file and run oscollector manually on the LPAR.')
+            if __debug__:
+                logger.exception(e)
+            logger.error('Error during connection to LPAR: ' + lpar.name +
+                         ', please check previous messages and run oscollector manually on the LPAR.')
+            return False
+        # Fun Fact: Try Except blocks also have an else condition, it's triggered when it exits cleanly.
+        else:
+            # Once we got a connection to the LPAR, send the file, exec the script and retrieve the file.
+            try:
+                output_file = system_name + '-' + lpar.name + '-' + today
+                # Cleanup file if it exists, then upload
+                lpar_ssh.execute_command('rm /f ' + oscollector, 60)
+                lpar_ssh.upload_file(path_to_oscollector + '\\' + oscollector)
+                # If the LPAR is VIOS, we need to execute as root instead of padmin
+                if 'VIOS' in lpar.os:
+                    lpar_ssh.execute_command('chmod 777 ' + oscollector, 30, vios=True)
+                    response = lpar_ssh.execute_command('./' + oscollector, 60, vios=True)
+                else:
+                    lpar_ssh.execute_command('chmod 777 ' + oscollector, 30)
+                    response = lpar_ssh.execute_command('./' + oscollector, 120)
+                # Check the output to find the generated filename OR raise an alert due to the script failing.
+                old_name = None
+                for line in response:
+                    if 'genero el archivo' in line:
+                        regex = re.compile('(?<=vo ).*tar')
+                        found = regex.search(line)
+                        old_name = found.group(0)
+                        break
+                if not old_name:
+                    print_red('Error encountered during transfer or execution of script on LPAR: ' + lpar.name +
+                              ', please check log file and run oscollector manually on the LPAR.')
+                    if __debug__:
+                        logger.exception(e)
+                    logger.error(
+                        'Error encountered during transfer or execution of script on LPAR: ' + lpar.name +
+                        ', please check previous messages and run oscollector manually on the LPAR.')
+                    return False
+                # Rename and download the file, cleanup temp files.
+                lpar_ssh.execute_command('mv ' + old_name + ' ' + output_file + '.tar', 30)
+                lpar_ssh.execute_command('rm ' + old_name + '-config.txt', 30)
+                lpar_ssh.execute_command('rm ' + old_name + '-error.txt', 30)
+                lpar_ssh.execute_command('rm ' + old_name + '-lsgcl.txt', 30)
+                lpar_ssh.execute_command('rm ' + oscollector, 60)
+                lpar_ssh.download_file(output_file + '.tar', output_path)
+                lpar_ssh.execute_command('rm ' + output_file + '.tar', 30)
+            except Exception as e:
+                print_red('Error encountered during transfer or execution of script on LPAR: ' + lpar.name +
+                          ', please check log file and run oscollector manually on the LPAR.')
+                if __debug__:
+                    logger.exception(e)
+                logger.error('Error encountered during transfer or execution of script on LPAR: ' + lpar.name +
+                             ', please check previous messages and run oscollector manually on the LPAR.')
+                return False
+            else:
+                return True
+            finally:
+                lpar_ssh.disconnect()
+    # Another Fun Fact: For loops ALSO have else conditions, this one is triggered on loop reaching the end.
+    else:
+        print_red('Error during connection to LPAR: ' + lpar.name + ', please check log file.')
+        logger.error('Error during connection to LPAR: ' + lpar.name + ', please check previous messages.')
+        return False
+
+
+def is_hmc(hmc):
+    """
+    : Checks if the host is an HMC
+    : Takes an SSHClient object as input
+    """
+    try:
+        response = hmc.execute_command('lshmc -v | grep Console', 10)
+        for line in response:
+            if '*DS Hardware Management Console' in line:
+                return True
+        else:
+            return False
+    except Exception as e:
+        raise e
+
+
+def run_hmc_scan(hmc_scan_path, hmc, user, password, output_path):
+    # Check that the supplied path exists AND JAVA is installed
+    if not os.path.exists(hmc_scan_path + '\\' + 'hmcScanner.jar'):
+        logger.error('Missing HMC Scanner files, aborting HMC Scanner invocation.')
+        return False
+    java = check_java()
+    if java:
+        logger.info(f'Java is available: {java}')
+        hmc_scanner_command = 'java -Duser.language=en -cp "' + hmc_scan_path + '\\' + 'jsch-0.1.55.jar";"' + \
+                              hmc_scan_path + '\\' + 'hmcScanner.jar";"' + hmc_scan_path + '\\' + \
+                              'jxl.jar" hmcScanner.Loader ' + hmc + ' ' + user + ' -p ' + \
+                              password + ' -dir "' + output_path + '"'
+        logger.info('| Calling HMC Scanner: ' + hmc_scanner_command)
+        subprocess.run(hmc_scanner_command)
+        return True
+    else:
+        logger.error('Java is not available, aborting HMC Scanner invocation.')
+        return False
+
+
+def exec_hmc_cmd_adapt(hmc, command, timeout):
+    """
+    : Execute a command on the provided and opened ssh connection to an HMC
+    : check if the command fails due to invalid attributes or parameters
+    : delete them and retry
+    """
+    try:
+        out = hmc.execute_command(command, timeout)
+        while 'An invalid' in out[0]:
+            # This regex matches the invalid attribute OR invalid parameter
+            regex = re.compile(r'(?<= is )[^ .]*|(?<=rs) [^ .]*')
+            result = regex.search(out[0])
+            invalid_part = result.group(0)
+            # Remove the offending attribute from command, also remove trailing, leading or double :
+            command = command.replace(invalid_part, '')
+            command = command.replace(': ', ' ')
+            command = command.replace(' :', ' ')
+            command = command.replace('::', ':')
+            logger.info("Retrying command without " + invalid_part)
+            out = hmc.execute_command(command, timeout)
+        return out
+    except Exception as e:
+        raise e
