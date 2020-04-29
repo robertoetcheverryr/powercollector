@@ -5,6 +5,8 @@
 - Solved bugs related to old HMC versions not having all the attributes or parameters for some commands
 - Improved code flow using safeguard clauses instead of nesting
 - Added output of non-collected LPARs, including powered off, Linux and IBM i LPARs
+- Added lpar_env to LPAR class, this allows to better determine the running OS
+- Improved LPAR collection to account for older HMC's lack of rmc_ip, --osrefresh and a plethora of other attributes
 
 # v1.0.7 - 26/04/2020
 

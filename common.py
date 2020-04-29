@@ -7,26 +7,23 @@
 
 # Import logger for the main log file
 from loguru import logger
-
 # Import subprocess to run external processes
 import subprocess
-
 # Import os to use file functions
 import os
-
 # Import Jsonizable to store and read the data
 from jsonizable import Jsonizable
 import json
-
 # Import re to work with regular expressions
 import re
-
 # Import socket to do low-level networking
 import socket
 # Import the RemoteClient class from the sshclient file
 from paramiko import AuthenticationException
-
+# Import the RemoteClient to connect to HMC and LPAR
 from sshclient import RemoteClient
+# Import copy to deepcopy modules
+import copy
 
 
 # Define LPAR class
@@ -303,9 +300,8 @@ def save_os_level_data_for_sys(managed_systems, base_dir, output_dir, today, osc
             logger.info('LPAR: ' + lpar.name + '\'s OS-level collection started.')
             if not save_lpar_os_data(lpar=lpar, oscollector=oscollector, path_to_oscollector=base_dir,
                                      output_path=output_dir, system_name=system.name, today=today):
-                non_collected_lpar = lpar
-                non_collected_lpar.name = system.name + ' ' + non_collected_lpar.name
-                non_collected_lpars.append(non_collected_lpar)
+                non_collected_lpars.append(copy.deepcopy(lpar))
+                non_collected_lpars[-1].name = system.name + ' ' + lpar.name
             print('LPAR: ' + lpar.name + '\'s OS-level collection ended.')
             logger.info('LPAR: ' + lpar.name + '\'s OS-level collection ended.')
         print('LPAR OS-level collection for System: ' + system.name + ' completed.')
