@@ -35,25 +35,28 @@ from sshclient import RemoteClient
 class LPAR(Jsonizable):
     # Use slots to make Python reduce RAM usage, since it doesn't use a dict to store attributes and
     # the attributes are defined from the start.
-    __slots__ = ['name', 'id', 'os', 'rmc_ip', 'state']
+    __slots__ = ['name', 'id', 'env', 'os_level', 'rmc_ip', 'state']
 
     # All of our inits will now also accept a json object, which we'll use to call the parent class' init
-    def __init__(self, json_in=None, name=None, lpar_id=None, lpar_os=None, state=None, rmc_ip=None):
+    def __init__(self, json_in=None, name=None, lpar_id=None, lpar_env=None,
+                 lpar_os_level=None, state=None, rmc_ip=None):
         self.name = name or ''
         self.id = lpar_id or ''
-        self.os = lpar_os or ''
+        self.os_level = lpar_os_level or ''
         self.rmc_ip = rmc_ip or ''
         self.state = state or ''
+        self.env = lpar_env or ''
         super().__init__(json_in)
 
     class Meta:
         schema = {
             "name": str,
             # Is it worth it to get type-happy with things like ID?
-            "id?": str,
-            "os?": str,
+            "env": str,
+            "id": str,
+            "os_level": str,
             "rmc_ip": str,
-            "state?": str,
+            "state": str,
         }
 
 
@@ -369,17 +372,14 @@ def save_lpar_os_data(lpar, oscollector, path_to_oscollector, output_path, today
         logger.error('LPAR: ' + lpar.name + ' must be running to be collected. Please '
                                             'run oscollector manually if needed.')
         return False
-    if 'OS/400' in lpar.os:
+    if 'os400' in lpar.env:
         print_red('LPAR: ' + lpar.name + ' is running IBM i, cannot run oscollector.')
         logger.info('LPAR: ' + lpar.name + ' is running IBM i, cannot run oscollector.')
         return False
-    if 'Linux' in lpar.os:
+    # AIX and Linux share the same "env" so if the os version is known, we can exclude Linux from collection
+    if 'Linux' in lpar.os_level:
         print_red('LPAR: ' + lpar.name + ' is running Linux, cannot run oscollector.')
         logger.info('LPAR: ' + lpar.name + ' is running Linux, cannot run oscollector.')
-        return False
-    if 'Unknown' in lpar.os:
-        print_red('The HMC doesn\'t know LPAR: ' + lpar.name + '\'s Operating System, cannot run oscollector')
-        logger.info('The HMC doesn\'t know LPAR: ' + lpar.name + '\'s Operating System, cannot run oscollector')
         return False
     if lpar.rmc_ip == '':
         # If the LPAR is Running but doesn't have an RMC IP Address, we cannot connect and something is
@@ -398,10 +398,10 @@ def save_lpar_os_data(lpar, oscollector, path_to_oscollector, output_path, today
                                                                        'oscollector manually')
         return False
     # If no user/pass were provided, set defaults.
-    if 'VIOS' in lpar.os:
+    if 'vioserver' in lpar.env:
         username = username or 'padmin'
         password = password or 'padmin'
-    if 'AIX' in lpar.os:
+    if 'aixlinux' in lpar.env:
         username = username or 'root'
         password = password or 'password'
     for attempt in range(5):
@@ -437,7 +437,7 @@ def save_lpar_os_data(lpar, oscollector, path_to_oscollector, output_path, today
                 lpar_ssh.execute_command('rm /f ' + oscollector, 60)
                 lpar_ssh.upload_file(path_to_oscollector + '\\' + oscollector)
                 # If the LPAR is VIOS, we need to execute as root instead of padmin
-                if 'VIOS' in lpar.os:
+                if 'vioserver' in lpar.env:
                     lpar_ssh.execute_command('chmod 777 ' + oscollector, 30, vios=True)
                     response = lpar_ssh.execute_command('./' + oscollector, 60, vios=True)
                 else:

@@ -28,8 +28,10 @@ from common import save_os_level_data_for_sys, is_hmc, exec_hmc_cmd_adapt
 from sshclient import RemoteClient
 # Import colorama for console colors
 from colorama import init, Fore, Back, Style
+
 # Program START!
 try:
+    # Colorama initialization
     init()
     # Firstly, disable logger, we'll only have console output until output_dir is defined.
     logger.remove()
@@ -280,7 +282,7 @@ try:
                     system.fsp_secondary.perm_level = response[0].replace('\n', '').split(':')
         except:
             logger.error('Error obtaining secondary FSP\'s data, check previous messages.')
-        # Obtain system capabilities
+        # Obtain system capabilities - This fails safe, if the command doesn't exist, it'll store that response
         response = hmc_ssh.execute_command('lssyscfg -r sys -m ' + system.name + ' -F capabilities', 30)
         system.capabilities = response[0].replace('\n', '')
 
@@ -297,26 +299,35 @@ try:
                     system.io_slots.append(IOSlot(feature_codes=fc, description=desc, unit_phys_loc=upl,
                                                   phys_loc=pl, drc_name=drcn))
             except Exception as e:
-                print_red('No IO Slot information available for System: ' + system.name + ' please check log file.')
+                print_red('Error during IO Slot collection for System: ' + system.name + ' please check log file.')
                 if __debug__:
                     logger.exception(e)
-                logger.info('No IO Slot information available for System: ' + system.name +
+                logger.info('Error during IO Slot collection for System: ' + system.name +
                             ' please check previous messages.')
 
             # Obtain LPAR list
             try:
                 command = 'lssyscfg -r lpar -m ' + system.name + \
-                          ' -F lpar_id:name:os_version:state:rmc_ipaddr --osrefresh'
-                response = exec_hmc_cmd_adapt(hmc_ssh, command, 120)
+                          ' -F lpar_id:name:lpar_env:state'
+                response = hmc_ssh.execute_command(command, 120)
                 for lpar in response:
-                    l_id, lpar_name, l_os, running, lpar_rmc_ip = lpar.replace('\n', '').split(':')
-                    system.partition_list.append(LPAR(name=lpar_name, lpar_id=l_id, lpar_os=l_os,
-                                                      state=running, rmc_ip=lpar_rmc_ip))
+                    l_id, l_name, l_env, running = lpar.replace('\n', '').split(':')
+                    system.partition_list.append(LPAR(name=l_name, lpar_id=l_id, state=running, lpar_env=l_env))
+                for lpar in system.partition_list:
+                    command = 'lssyscfg -r lpar -m ' + system.name + ' --filter \"lpar_names=' + lpar.name + \
+                              '\" -F os_version:rmc_ipaddr --header --osrefresh'
+                    response = exec_hmc_cmd_adapt(hmc_ssh, command, 120)
+                    if "rmc_ipaddr" in response[0]:
+                        lpar.os_level, lpar.rmc_ip = response[1].replace('\n', '').split(':')
+                    elif "os_version" in response[0]:
+                        lpar.os_level = response[1].replace('\n', '')
+
             except Exception as e:
-                print_red('No LPAR information available for System: ' + system.name + ' please check log file.')
+                print_red('Error during LPAR information collection for System: ' + system.name +
+                          ' please check log file.')
                 if __debug__:
                     logger.exception(e)
-                logger.info('No LPAR information available for System: ' + system.name +
+                logger.info('Error during LPAR information collection for System: ' + system.name +
                             ' please check previous messages.')
             try:
                 # Obtain IO topology
@@ -332,11 +343,11 @@ try:
                         EnclosureTopology(enclosure=enclosure_name, leading_hub_port=leading_port,
                                           trailing_hub_port=trailing_port))
             except Exception as e:
-                print_red('No IO Topology information available for System: ' + system.name +
+                print_red('Error during IO Topology collection for System: ' + system.name +
                           ' please check log file.')
                 if __debug__:
                     logger.exception(e)
-                logger.info('No IO Topology information available for System: ' + system.name +
+                logger.info('Error during IO Topology collection for System: ' + system.name +
                             ' please check previous messages.')
 
         else:
