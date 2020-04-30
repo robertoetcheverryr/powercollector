@@ -301,7 +301,7 @@ def save_os_level_data_for_sys(managed_systems, base_dir, output_dir, today, osc
             if not save_lpar_os_data(lpar=lpar, oscollector=oscollector, path_to_oscollector=base_dir,
                                      output_path=output_dir, system_name=system.name, today=today):
                 non_collected_lpars.append(copy.deepcopy(lpar))
-                non_collected_lpars[-1].name = system.name + ' ' + lpar.name
+                non_collected_lpars[-1].name = system.name + '-' + lpar.name
             print('LPAR: ' + lpar.name + '\'s OS-level collection ended.')
             logger.info('LPAR: ' + lpar.name + '\'s OS-level collection ended.')
         print('LPAR OS-level collection for System: ' + system.name + ' completed.')
@@ -394,11 +394,12 @@ def save_lpar_os_data(lpar, oscollector, path_to_oscollector, output_path, today
                                                                        'oscollector manually')
         return False
     # If no user/pass were provided, set defaults.
-    username = username or 'root'
-    password = password or 'password'
     if 'vioserver' in lpar.env:
         username = username or 'padmin'
         password = password or 'padmin'
+    else:
+        username = username or 'root'
+        password = password or 'password'
     for attempt in range(5):
         print('Please input username and password or press enter to use the proposed value.')
         # Ask for input, if the input is empty, use the current value
@@ -428,9 +429,9 @@ def save_lpar_os_data(lpar, oscollector, path_to_oscollector, output_path, today
             # Once we got a connection to the LPAR, send the file, exec the script and retrieve the file.
             try:
                 if system_name is None:
-                    output_file = lpar.name + '-' + today
+                    output_file = lpar.name.replace(' ', '-') + '-' + today
                 else:
-                    output_file = system_name + '-' + lpar.name + '-' + today
+                    output_file = system_name.replace(' ', '-') + '-' + lpar.name.replace(' ', '-') + '-' + today
                 # Cleanup file if it exists, then upload
                 lpar_ssh.execute_command('rm /f ' + oscollector, 60)
                 lpar_ssh.upload_file(path_to_oscollector + '\\' + oscollector)
