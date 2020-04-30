@@ -356,7 +356,7 @@ def get_oscollector(path_to_oscollector):
 
 
 def save_lpar_os_data(lpar, oscollector, path_to_oscollector, output_path, today, password=None, username=None,
-                      system_name=''):
+                      system_name=None):
     """
     : get lpar os data takes the lpar, oscollector
     """
@@ -394,12 +394,11 @@ def save_lpar_os_data(lpar, oscollector, path_to_oscollector, output_path, today
                                                                        'oscollector manually')
         return False
     # If no user/pass were provided, set defaults.
+    username = username or 'root'
+    password = password or 'password'
     if 'vioserver' in lpar.env:
         username = username or 'padmin'
         password = password or 'padmin'
-    if 'aixlinux' in lpar.env:
-        username = username or 'root'
-        password = password or 'password'
     for attempt in range(5):
         print('Please input username and password or press enter to use the proposed value.')
         # Ask for input, if the input is empty, use the current value
@@ -428,14 +427,17 @@ def save_lpar_os_data(lpar, oscollector, path_to_oscollector, output_path, today
         else:
             # Once we got a connection to the LPAR, send the file, exec the script and retrieve the file.
             try:
-                output_file = system_name + '-' + lpar.name + '-' + today
+                if system_name is None:
+                    output_file = lpar.name + '-' + today
+                else:
+                    output_file = system_name + '-' + lpar.name + '-' + today
                 # Cleanup file if it exists, then upload
                 lpar_ssh.execute_command('rm /f ' + oscollector, 60)
                 lpar_ssh.upload_file(path_to_oscollector + '\\' + oscollector)
                 # If the LPAR is VIOS, we need to execute as root instead of padmin
                 if 'vioserver' in lpar.env:
                     lpar_ssh.execute_command('chmod 777 ' + oscollector, 30, vios=True)
-                    response = lpar_ssh.execute_command('./' + oscollector, 60, vios=True)
+                    response = lpar_ssh.execute_command('./' + oscollector, 120, vios=True)
                 else:
                     lpar_ssh.execute_command('chmod 777 ' + oscollector, 30)
                     response = lpar_ssh.execute_command('./' + oscollector, 120)
@@ -450,14 +452,13 @@ def save_lpar_os_data(lpar, oscollector, path_to_oscollector, output_path, today
                 if not old_name:
                     print_red('Error encountered during transfer or execution of script on LPAR: ' + lpar.name +
                               ', please check log file and run oscollector manually on the LPAR.')
-                    if __debug__:
-                        logger.exception(e)
                     logger.error(
                         'Error encountered during transfer or execution of script on LPAR: ' + lpar.name +
                         ', please check previous messages and run oscollector manually on the LPAR.')
                     return False
                 # Rename and download the file, cleanup temp files.
                 lpar_ssh.execute_command('mv ' + old_name + ' ' + output_file + '.tar', 30)
+                old_name = old_name.replace('.tar', '')
                 lpar_ssh.execute_command('rm ' + old_name + '-config.txt', 30)
                 lpar_ssh.execute_command('rm ' + old_name + '-error.txt', 30)
                 lpar_ssh.execute_command('rm ' + old_name + '-lsgcl.txt', 30)
