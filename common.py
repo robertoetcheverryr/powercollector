@@ -2,7 +2,7 @@
 # * powercollector.common                                                    *
 # * Module for common classes and functions                                  *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.8 2020/04/26                                                    *
+# * Ver: 1.0.8 2020/05/03                                                    *
 # ****************************************************************************
 
 # Import logger for the main log file
@@ -133,7 +133,8 @@ class ManagedSystem(Jsonizable):
         self.fsp_primary = FSP()
         self.fsp_secondary = FSP()
         self.capabilities = ''
-        super().__init__(json_in)
+        if json_in:
+            super().__init__(json_in)
 
     class Meta:
         schema = {
@@ -151,23 +152,27 @@ class ManagedSystem(Jsonizable):
 
 # Define HMC Class
 class HMC(Jsonizable):
-    __slots__ = ['hostname', 'domain', 'version', 'mt', 'serial']
+    __slots__ = ['hostname', 'domain', 'version', 'mt', 'serial', 'managed_systems']
 
-    def __init__(self, json_in=None, hostname=None, domain=None, version=None, mt=None, serial=None):
+    def __init__(self, json_in=None, hostname=None, domain=None, version=None,
+                 mt=None, serial=None, managed_systems=None):
         self.hostname = hostname or ''
         self.domain = domain or ''
         self.version = version or ''
         self.mt = mt or ''
         self.serial = serial or ''
-        super().__init__(json_in)
+        self.managed_systems = managed_systems or []
+        if json_in:
+            super().__init__(json_in)
 
     class Meta:
         schema = {
             "hostname": str,
-            "domain": str,
+            "domain?": str,
             "version": str,
             "mt": str,
             "serial": str,
+            "managed_systems?": [ManagedSystem],
         }
 
 
@@ -186,35 +191,20 @@ def check_java():
         return result.string
 
 
-def save_hmc_data(hmc_src, hmc, managed_systems, output_dir):
+def save_hmc_data(hmc_src, hmc, output_dir):
     # File format: HMC object first then ManagedSystem objects
     output_file = output_dir + '\\' + hmc_src + '-SystemsManagedByHMC-' + hmc.hostname + '.json'
     with open(output_file, "w+") as file:
         # Write HMC's JSON
-        file.write(json.dumps(hmc.write()) + '\n')
-        # Write Managed Systems' JSON
-        for system_ in managed_systems:
-            file.write(json.dumps(system_.write()) + '\n')
+        file.write(json.dumps(hmc.write(), indent=4))
     print('Reading written file for consistency.')
-    read_hmc, read_managed_systems = read_hmc_data(output_file)
+    read_hmc = read_hmc_data(output_file)
     # noinspection PyUnresolvedReferences
     if read_hmc.write() == hmc.write():
         # HMC object is correct
-        if len(read_managed_systems) == len(managed_systems):
-            # Both objects are same size
-            for index, system in enumerate(managed_systems):
-                # noinspection PyUnresolvedReferences
-                if read_managed_systems[index].write() != system.write():
-                    print_red('Failure checking file consistency.')
-                    logger.error('Failure checking file consistency.')
-                    return False
-            print('File is consistent.')
-            logger.info('File is consistent.')
-            return True
-        else:
-            print_red('Failure checking file consistency.')
-            logger.error('Failure checking file consistency.')
-            return False
+        print('File is consistent.')
+        logger.info('File is consistent.')
+        return True
     else:
         print_red('Failure checking file consistency.')
         logger.error('Failure checking file consistency.')
@@ -223,13 +213,16 @@ def save_hmc_data(hmc_src, hmc, managed_systems, output_dir):
 
 def read_hmc_data(input_file):
     """
-    : Reads a powercollector JSON file to populate and return HMC and ManagedSystems objects
+    : Reads a powercollector JSON file to populate and returns the HMC object
     """
     with open(input_file, "r") as file:
         print('Attempting to open JSON File: ' + str(input_file))
         logger.info('Attempting to open JSON File: ' + str(input_file))
         try:
-            hmc_ = HMC(json_in=json.loads(file.readline()))
+            hmc_ = HMC(json_in=json.loads(file.read()))
+            print('HMC and Managed Systems loaded successfully.')
+            logger.info('HMC and Managed Systems loaded successfully.')
+            return hmc_
         except json.JSONDecodeError as e:
             print_red(f'{e.msg} line {e.lineno} column {e.colno} (char {e.pos})')
             logger.error(f'{e.msg} line {e.lineno} column {e.colno} (char {e.pos})')
@@ -243,21 +236,6 @@ def read_hmc_data(input_file):
             if __debug__:
                 logger.exception(e)
             return False
-        else:
-            try:
-                managed_systems_ = []
-                lines = file.readlines()
-                for index, line in enumerate(lines):
-                    managed_systems_.append(ManagedSystem(json_in=json.loads(line)))
-                print('HMC and Managed Systems loaded successfully.')
-                logger.info('HMC and Managed Systems loaded successfully.')
-                return hmc_, managed_systems_
-            except json.JSONDecodeError as e:
-                print_red(f'{e.msg} line {e.lineno + index} column {e.colno} (char {e.pos})')
-                logger.error(f'{e.msg} line {e.lineno + index} column {e.colno} (char {e.pos})')
-                if __debug__:
-                    logger.exception(e)
-                return False
 
 
 def check_host(hostname):
@@ -408,6 +386,7 @@ def save_lpar_os_data(lpar, oscollector, path_to_oscollector, output_path, today
         try:
             lpar_ssh = RemoteClient(host=lpar.rmc_ip, user=username, password=password, remote_path='.')
             lpar_ssh.execute_command('hostname', 10)
+            logger.info('Authentication successful.')
         except AuthenticationException:
             if attempt == 4:
                 return False
@@ -432,16 +411,34 @@ def save_lpar_os_data(lpar, oscollector, path_to_oscollector, output_path, today
                     output_file = lpar.name.replace(' ', '-') + '-' + today
                 else:
                     output_file = system_name.replace(' ', '-') + '-' + lpar.name.replace(' ', '-') + '-' + today
-                # Cleanup file if it exists, then upload
-                lpar_ssh.execute_command('rm /f ' + oscollector, 60)
-                lpar_ssh.upload_file(path_to_oscollector + '\\' + oscollector)
                 # If the LPAR is VIOS, we need to execute as root instead of padmin
+                # How to find out if LPAR is VIOS:
+                # 1. Run lsdev searching for vios0 device. Newer VIOSes might answer, olders might not.
+                # 2. If there's no answer, try again with oem_setup_env, VIOS WILL answer, AIX will not.
+                set_vios = False
+                if not lpar.env:
+                    logger.info('Detecting LPAR OS.')
+                    response, _ = lpar_ssh.execute_command('uname -s', 30, want_errors=True)
+                    if not response:
+                        response, _ = lpar_ssh.execute_command('lsdev | grep vios0', 30,
+                                                               vios=True, want_errors=True)
+                        if response:
+                            # VIOS doesn't run some commands via exec and the vios0 device only exists on VIOS
+                            logger.info('Detected a VIOS LPAR.')
+                            lpar.env = 'vioserver'
+                        else:
+                            logger.info('Detected an AIX/Linux LPAR')
+                            lpar.env = 'aixlinux'
+                    else:
+                        logger.info('Detected an AIX/Linux LPAR')
+                        lpar.env = 'aixlinux'
                 if 'vioserver' in lpar.env:
-                    lpar_ssh.execute_command('chmod 777 ' + oscollector, 30, vios=True)
-                    response = lpar_ssh.execute_command('./' + oscollector, 120, vios=True)
-                else:
-                    lpar_ssh.execute_command('chmod 777 ' + oscollector, 30)
-                    response = lpar_ssh.execute_command('./' + oscollector, 120)
+                    set_vios = True
+                # Cleanup file if it exists, then upload
+                lpar_ssh.execute_command('rm /f ' + oscollector, 60, vios=set_vios)
+                lpar_ssh.upload_file(path_to_oscollector + '\\' + oscollector)
+                lpar_ssh.execute_command('chmod 777 ' + oscollector, 30, vios=set_vios)
+                response = lpar_ssh.execute_command('./' + oscollector, 120, vios=set_vios)
                 # Check the output to find the generated filename OR raise an alert due to the script failing.
                 old_name = None
                 for line in response:
@@ -458,14 +455,15 @@ def save_lpar_os_data(lpar, oscollector, path_to_oscollector, output_path, today
                         ', please check previous messages and run oscollector manually on the LPAR.')
                     return False
                 # Rename and download the file, cleanup temp files.
-                lpar_ssh.execute_command('mv ' + old_name + ' ' + output_file + '.tar', 30)
+                lpar_ssh.execute_command('mv ' + old_name + ' ' + output_file + '.tar', 30,
+                                         want_errors=True, vios=set_vios)
                 old_name = old_name.replace('.tar', '')
-                lpar_ssh.execute_command('rm ' + old_name + '-config.txt', 30)
-                lpar_ssh.execute_command('rm ' + old_name + '-error.txt', 30)
-                lpar_ssh.execute_command('rm ' + old_name + '-lsgcl.txt', 30)
-                lpar_ssh.execute_command('rm ' + oscollector, 60)
+                lpar_ssh.execute_command('rm ' + old_name + '-config.txt', 30, want_errors=True, vios=set_vios)
+                lpar_ssh.execute_command('rm ' + old_name + '-error.txt', 30, want_errors=True, vios=set_vios)
+                lpar_ssh.execute_command('rm ' + old_name + '-lsgcl.txt', 30, want_errors=True, vios=set_vios)
+                lpar_ssh.execute_command('rm ' + oscollector, 60, want_errors=True, vios=set_vios)
                 lpar_ssh.download_file(output_file + '.tar', output_path)
-                lpar_ssh.execute_command('rm ' + output_file + '.tar', 30)
+                lpar_ssh.execute_command('rm ' + output_file + '.tar', 30, want_errors=True, vios=set_vios)
             except Exception as e:
                 print_red('Error encountered during transfer or execution of script on LPAR: ' + lpar.name +
                           ', please check log file and run oscollector manually on the LPAR.')

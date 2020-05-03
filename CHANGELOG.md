@@ -1,10 +1,11 @@
-# v1.0.8 - 28/04/2020
+# v1.0.8 - 03/05/2020
 
 - Extensive refactoring to enable auxiliary modules like oscollectorHelper
 - Initial release of oscollectorHelper
 - Solved bugs related to old HMC versions not having all the attributes or parameters for some commands
 - Improved code flow using safeguard clauses instead of nesting
 - Added output of non-collected LPARs, including powered off, Linux and IBM i LPARs
+- Refactored HMC class to comply with JSON standards for output file
 - Added lpar_env to LPAR class, this allows to better determine the running OS
 - Improved LPAR collection to account for older HMC's lack of rmc_ip, --osrefresh and a plethora of other attributes
 

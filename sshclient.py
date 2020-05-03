@@ -3,7 +3,7 @@
 # * Module for ssh classes and functions, based on code from:                *
 # * Hackers and Slackers                                                     *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.8 2020/04/26                                                    *
+# * Ver: 1.0.8 2020/05/03                                                    *
 # ****************************************************************************
 
 import socket
@@ -91,7 +91,7 @@ class RemoteClient:
                 logger.exception(e)
             logger.error(f'Error downloading file {file} from {path}')
 
-    def execute_command(self, command, timeout=None, vios=False):
+    def execute_command(self, command, timeout=None, want_errors=False, vios=False):
         # Execute one command and return the output
         # In the specific case of Virtual IO Server, since the commands need to be root,
         # TODO find a better solution than a vios flag and all the duplication.
@@ -108,13 +108,19 @@ class RemoteClient:
                 stdin.flush()
             else:
                 stdin, stdout, stderr = self.client.exec_command(command, timeout=timeout)
-            response = stdout.readlines()
-            if not response:
-                logger.info(f'INPUT: {command} | OUTPUT: No output')
-            for line in response:
+            output = stdout.readlines()
+            error = stderr.readlines()
+            if not output:
+                logger.info(f'INPUT: {command} | STDOUT: No output')
+            for line in output:
                 line = line.replace('\n', '')
-                logger.info(f'INPUT: {command} | OUTPUT: {line}')
-            return response
+                logger.info(f'INPUT: {command} | STDOUT: {line}')
+            if not want_errors:
+                return output
+            for line in error:
+                line = line.replace('\n', '')
+                logger.info(f'INPUT: {command} | STDERR: {line}')
+            return output, error
         except socket.timeout as e:
             if __debug__:
                 logger.exception(e)

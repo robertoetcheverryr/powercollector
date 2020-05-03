@@ -3,7 +3,7 @@
 # * This program collects HMC, Managed System, LPAR and OS data from         *
 # * IBM Power systems.                                                       *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.8 2020/04/26                                                    *
+# * Ver: 1.0.8 2020/05/03                                                    *
 # ****************************************************************************
 
 # Import argparse and path to parse command line arguments and use path utilities
@@ -130,12 +130,12 @@ try:
     # Either collect info from the specified HMC or load the specified file.
     if args.input:
         try:
-            hmc, managed_systems = read_hmc_data(args.input)
+            hmc = read_hmc_data(args.input)
         except Exception:
             print_red('Error loading file. Exiting now.')
             logger.info('Error loading file. Exiting now.')
             sys.exit(1)
-        save_os_level_data_for_sys(managed_systems=managed_systems, base_dir=base_dir,
+        save_os_level_data_for_sys(managed_systems=hmc.managed_systems, base_dir=base_dir,
                                    output_dir=output_dir, today=today)
         print('powercollector has completed successfully.')
         logger.info('powercollector has completed successfully.')
@@ -145,7 +145,6 @@ try:
         print_red('HMC Connection error - please check log file.')
         logger.error('HMC Connection error - please check previous messages.')
         sys.exit(1)
-
     hmc = HMC()
     hmc_ssh = None
     print('Trying to connect to HMC: ' + args.hmc)
@@ -239,13 +238,12 @@ try:
         print('Managed Systems collection started.')
         logger.info('Managed Systems collection started.')
         # Obtain Managed System list
-        managed_systems = []
         response = hmc_ssh.execute_command('lssyscfg -r sys -F name:type_model:serial_num', 60)
 
         # Split response and populate system list
         for system in response:
             sys_name, sys_mt, sys_serial = system.replace('\n', '').split(':')
-            managed_systems.append(ManagedSystem(name=sys_name, mt=sys_mt, serial=sys_serial))
+            hmc.managed_systems.append(ManagedSystem(name=sys_name, mt=sys_mt, serial=sys_serial))
     except:
         print_red('HMC Managed Systems collection failed. Please check the log file.')
         logger.error('HMC Managed Systems collection failed. Please check previous messages.')
@@ -253,7 +251,7 @@ try:
 
     # Obtain FSP levels, IO Topo, LPAR list and their IP addresses for each managed system
     # lssyscfg -r lpar -m P7Server-8233-E8B-SN10095BP -F lpar_id,name,os_version,state,rmc_ipaddr --osrefresh
-    for system in managed_systems:
+    for system in hmc.managed_systems:
         print('Collection started for System: ' + system.name)
         logger.info('Collection started for System: ' + system.name)
         # Obtain FSP levels lslic -t sys -m 8233-E8B*10095BP -F
@@ -362,7 +360,7 @@ try:
         hmc_ssh.disconnect()
 
     # Save HMC + managed_systems to file
-    if not save_hmc_data(hmc_src=args.hmc, hmc=hmc, managed_systems=managed_systems, output_dir=output_dir):
+    if not save_hmc_data(hmc_src=args.hmc, hmc=hmc, output_dir=output_dir):
         # If the data saving fails for any reason, abort.
         sys.exit(1)
     if not run_hmc_scan(hmc_scan_path=hmc_scan_path, hmc=args.hmc, user=args.user,
@@ -375,7 +373,7 @@ try:
         logger.info('powercollector has completed successfully.')
         sys.exit(0)
     else:
-        save_os_level_data_for_sys(managed_systems=managed_systems, base_dir=base_dir,
+        save_os_level_data_for_sys(managed_systems=hmc.managed_systems, base_dir=base_dir,
                                    output_dir=output_dir, today=today)
     print('powercollector has completed successfully.')
     logger.info('powercollector has completed successfully.')
