@@ -358,9 +358,9 @@ def save_lpar_os_data(lpar, oscollector, path_to_oscollector, output_path, today
     if lpar.rmc_ip == '':
         # If the LPAR is Running but doesn't have an RMC IP Address, we cannot connect and something is
         # wrong with the LPAR.
-        print_red('LPAR: ' + lpar.name + 'is an AIX or VIOS LPAR but doesn\'t have an RMC IP address. Please '
+        print_red('LPAR: ' + lpar.name + ' is an AIX or VIOS LPAR but doesn\'t have an RMC IP address. Please '
                                          'run oscollector manually and check rmc services.')
-        logger.error('LPAR: ' + lpar.name + 'is an AIX or VIOS LPAR but doesn\'t have an RMC IP address. '
+        logger.error('LPAR: ' + lpar.name + ' is an AIX or VIOS LPAR but doesn\'t have an RMC IP address. '
                                             'Please run oscollector manually and check rmc services.')
         return False
     if not check_host(lpar.rmc_ip):
