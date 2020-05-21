@@ -1,3 +1,7 @@
+# v1.0.9 - 21/05/2020
+
+- Added VIOS errlog and VPD collection using viosrcmd command
+ 
 # v1.0.8 - 03/05/2020
 
 - Extensive refactoring to enable auxiliary modules like oscollectorHelper

@@ -1,4 +1,4 @@
-# powercollector v1.0.8
+# powercollector v1.0.9
 Powercollector is a tool to collect information from an IBM HMC (Hardware Management Console), it's Managed Systems, their hardware configuration, and PowerVM configuration.
 
 It features JSON formatted output for the HMC, Managed Systems, and LPAR information, it also invokes HMC Scanner to obtain additional information and a pretty Excel file.

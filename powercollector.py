@@ -3,7 +3,7 @@
 # * This program collects HMC, Managed System, LPAR and OS data from         *
 # * IBM Power systems.                                                       *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.8 2020/05/03                                                    *
+# * Ver: 1.0.9 2020/05/21                                                    *
 # ****************************************************************************
 
 # Import argparse and path to parse command line arguments and use path utilities
@@ -355,9 +355,6 @@ try:
 
         print('Collection finished for System: ' + system.name)
         logger.info('Collection finished for System: ' + system.name)
-    # Close the ssh connection
-    if hmc_ssh.conn is not None:
-        hmc_ssh.disconnect()
 
     # Save HMC + managed_systems to file
     if not save_hmc_data(hmc_src=args.hmc, hmc=hmc, output_dir=output_dir):
@@ -367,10 +364,40 @@ try:
                         password=args.password, output_path=output_dir):
         print_red('HMC Scanner run was aborted. Please check the log file and run it manually')
         logger.error('HMC Scanner run was aborted. Please check previous messages and run it manually')
+
+    # viosvrcmd -m 9406-570*A0001234 --id 4 -c "lsdev -virtual"
+    for system in hmc.managed_systems:
+        for lpar in system.partition_list:
+            if "vioserver" in lpar.env and "Running" in lpar.state:
+                try:
+                    j_list = hmc_ssh.execute_command('viosvrcmd -m ' + system.name +
+                                                     ' --id ' + lpar.id + ' -c "errlog"')
+                    with open(output_dir + '\\' + system.name + '-' + lpar.name + '-ErrorLog.json', "w+") as f:
+                        f.write(json.dumps(j_list, indent=4))
+                except:
+                    print_red('Error trying to get error log from VIOS: ' + lpar.name + ' for system: ' + system.name)
+                    if __debug__:
+                        logger.exception(e)
+                    logger.info('Error trying to get error log from VIOS: ' + lpar.name + ' for system: ' + system.name)
+                try:
+                    j_list = hmc_ssh.execute_command('viosvrcmd -m ' + system.name +
+                                                     ' --id ' + lpar.id + ' -c "lsdev -vpd"')
+
+                    with open(output_dir + '\\' + system.name + '-' + lpar.name + '-vpd.json', "w+") as f:
+                        f.write(json.dumps(j_list, indent=4))
+                except:
+                    print_red('Error trying to get VPD from VIOS: ' + lpar.name + ' for system: ' + system.name)
+                    if __debug__:
+                        logger.exception(e)
+                    logger.info('Error trying to get VPD from VIOS: ' + lpar.name + ' for system: ' + system.name)
+
     # If only collecting HMC info, exit now
+    # Close the ssh connection
+    if hmc_ssh.conn is not None:
+        hmc_ssh.disconnect()
     if args.hmconly:
-        print('powercollector has completed successfully.')
-        logger.info('powercollector has completed successfully.')
+        print('powercollector has completed successfully with --hmconly.')
+        logger.info('powercollector has completed successfully --hmconly.')
         sys.exit(0)
     else:
         save_os_level_data_for_sys(managed_systems=hmc.managed_systems, base_dir=base_dir,
@@ -379,7 +406,6 @@ try:
     logger.info('powercollector has completed successfully.')
     sys.exit(0)
 
-    # TODO: storwize collector - connect via cli - obtain snap - what else? - obtain partners and connect to them?
 except KeyboardInterrupt:
     # Cleanup?
     logger.error('powercollector killed by ctrl-C. Output may be invalid.')
