@@ -5,7 +5,8 @@
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
 # * Ver: 1.0.9 2020/05/21                                                    *
 # ****************************************************************************
-
+# TODO Check for root or padmin when loggin into LPAR
+# TODO add cleanup when failing to run oscollector
 # Import argparse and path to parse command line arguments and use path utilities
 import argparse
 # Import JSON to output json files
@@ -372,6 +373,8 @@ try:
                 try:
                     j_list = hmc_ssh.execute_command('viosvrcmd -m ' + system.name +
                                                      ' --id ' + lpar.id + ' -c "errlog"')
+                    j_list += hmc_ssh.execute_command('viosvrcmd -m ' + system.name +
+                                                      ' --id ' + lpar.id + ' -c "errlog -ls"')
                     with open(output_dir + '\\' + system.name + '-' + lpar.name + '-ErrorLog.json', "w+") as f:
                         f.write(json.dumps(j_list, indent=4))
                 except:
