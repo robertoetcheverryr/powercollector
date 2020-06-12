@@ -408,8 +408,10 @@ try:
     if hmc_ssh.conn is not None:
         hmc_ssh.disconnect()
     if args.hmconly:
-        print('powercollector has completed successfully with --hmconly.')
-        logger.info('powercollector has completed successfully --hmconly.')
+        print('powercollector has completed successfully with --hmconly. '
+              'Please run oscollector manually on the LPARs if the managed system is running.')
+        logger.info('powercollector has completed successfully --hmconly. '
+                    'Please run oscollector manually on the LPARs if the managed system is running.')
         sys.exit(0)
     else:
         save_os_level_data_for_sys(managed_systems=hmc.managed_systems, base_dir=base_dir,
