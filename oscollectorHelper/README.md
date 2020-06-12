@@ -1,4 +1,4 @@
-# oscollectorHelper 1.0.0
+# oscollectorHelper 1.0.1
 
 oscollectorHelper is an auxiliary tool for powercollector.
 It allows for manual collection of OS-level data using the `--lpar` parameter for a single LPAR or `--input` for a list of LPARs in JSON format.
