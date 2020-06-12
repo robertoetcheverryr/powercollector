@@ -1,3 +1,10 @@
+# v1.0.10 - 12/06/2020
+
+- Fixed behaviour when system or LPAR contains spaces
+- Expanded viosrcmd data
+- Clarified error messages
+- General code cleanup
+
 # v1.0.9 - 21/05/2020
 
 - Added VIOS errlog and VPD collection using viosrcmd command

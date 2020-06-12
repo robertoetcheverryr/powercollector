@@ -2,7 +2,7 @@
 # * powercollector.common                                                    *
 # * Module for common classes and functions                                  *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.9 2020/05/21                                                    *
+# * Ver: 1.0.10 2020/06/12                                                   *
 # ****************************************************************************
 
 # Import logger for the main log file
@@ -240,7 +240,7 @@ def read_hmc_data(input_file):
 
 def check_host(hostname):
     """
-    :This function checks if a provided hostname is reachable.
+    :This function checks if a provided hostname is pingable.
     :Returns True if the host is reachable and False if not.
     :Logs to the console and logfile any problems.
     """
@@ -248,8 +248,8 @@ def check_host(hostname):
         host = socket.gethostbyname(hostname)
         subprocess.run('ping -n 1 ' + host, check=True, stdout=subprocess.DEVNULL)
     except subprocess.CalledProcessError:
-        print_red('Host: ' + hostname + ' is not reachable.')
-        logger.error('Host: ' + hostname + ' is not reachable.')
+        print_red('Host: ' + hostname + ' is not responding to ICMP Ping.')
+        logger.error('Host: ' + hostname + ' is not responding to ICMP Ping.')
         return False
     except socket.error:
         print_red('Host: ' + hostname + ' is not resolvable.')
@@ -438,7 +438,7 @@ def save_lpar_os_data(lpar, oscollector, path_to_oscollector, output_path, today
                 lpar_ssh.execute_command('rm /f ' + oscollector, 60, vios=set_vios)
                 lpar_ssh.upload_file(path_to_oscollector + '\\' + oscollector)
                 lpar_ssh.execute_command('chmod 777 ' + oscollector, 30, vios=set_vios)
-                response = lpar_ssh.execute_command('./' + oscollector, 120, vios=set_vios)
+                response = lpar_ssh.execute_command('./' + oscollector, 300, vios=set_vios)
                 # Check the output to find the generated filename OR raise an alert due to the script failing.
                 old_name = None
                 for line in response:
@@ -454,16 +454,11 @@ def save_lpar_os_data(lpar, oscollector, path_to_oscollector, output_path, today
                         'Error encountered during transfer or execution of script on LPAR: ' + lpar.name +
                         ', please check previous messages and run oscollector manually on the LPAR.')
                     return False
-                # Rename and download the file, cleanup temp files.
+                # Rename and download the file.
                 lpar_ssh.execute_command('mv ' + old_name + ' ' + output_file + '.tar', 30,
                                          want_errors=True, vios=set_vios)
                 old_name = old_name.replace('.tar', '')
-                lpar_ssh.execute_command('rm ' + old_name + '-config.txt', 30, want_errors=True, vios=set_vios)
-                lpar_ssh.execute_command('rm ' + old_name + '-error.txt', 30, want_errors=True, vios=set_vios)
-                lpar_ssh.execute_command('rm ' + old_name + '-lsgcl.txt', 30, want_errors=True, vios=set_vios)
-                lpar_ssh.execute_command('rm ' + oscollector, 60, want_errors=True, vios=set_vios)
                 lpar_ssh.download_file(output_file + '.tar', output_path)
-                lpar_ssh.execute_command('rm ' + output_file + '.tar', 30, want_errors=True, vios=set_vios)
             except Exception as e:
                 print_red('Error encountered during transfer or execution of script on LPAR: ' + lpar.name +
                           ', please check log file and run oscollector manually on the LPAR.')
@@ -475,6 +470,22 @@ def save_lpar_os_data(lpar, oscollector, path_to_oscollector, output_path, today
             else:
                 return True
             finally:
+                try:
+                    logger.info('Starting cleanup on LPAR: ' + lpar.name)
+                    lpar_ssh.execute_command('rm ' + old_name + '-config.txt', 30, want_errors=True, vios=set_vios)
+                    lpar_ssh.execute_command('rm ' + old_name + '-error.txt', 30, want_errors=True, vios=set_vios)
+                    lpar_ssh.execute_command('rm ' + old_name + '-lsgcl.txt', 30, want_errors=True, vios=set_vios)
+                    lpar_ssh.execute_command('rm ' + oscollector, 60, want_errors=True, vios=set_vios)
+                    lpar_ssh.execute_command('rm ' + old_name + '.tar', 30, want_errors=True, vios=set_vios)
+                    lpar_ssh.execute_command('rm ' + output_file + '.tar', 30, want_errors=True, vios=set_vios)
+                except:
+                    print_red('Error encountered during cleanup on LPAR: ' + lpar.name +
+                              ', please check log file and delete the files manually on the LPAR.')
+                    if __debug__:
+                        logger.exception(e)
+                    logger.error('Error encountered during during cleanup on LPAR: ' + lpar.name +
+                                 ', please check previous messages and delete the files manually on the LPAR.')
+                    return False
                 lpar_ssh.disconnect()
     # Another Fun Fact: For loops ALSO have else conditions, this one is triggered on loop reaching the end.
     else:

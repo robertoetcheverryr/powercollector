@@ -3,7 +3,7 @@
 # * This program simplifies running oscollector on one or more LPARs         *
 # * it uploads and runs the .ksh file and downloads the results              *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.0 2020/04/26                                                    *
+# * Ver: 1.0.1 2020/06/26                                                    *
 # ****************************************************************************
 
 # Import argparse and path to parse command line arguments and use path utilities

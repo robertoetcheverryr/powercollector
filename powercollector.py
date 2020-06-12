@@ -3,10 +3,9 @@
 # * This program collects HMC, Managed System, LPAR and OS data from         *
 # * IBM Power systems.                                                       *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.9 2020/05/21                                                    *
+# * Ver: 1.0.10 2020/06/12                                                   *
 # ****************************************************************************
 # TODO Check for root or padmin when loggin into LPAR
-# TODO add cleanup when failing to run oscollector
 # Import argparse and path to parse command line arguments and use path utilities
 import argparse
 # Import JSON to output json files
@@ -27,6 +26,7 @@ from common import read_hmc_data, save_hmc_data, check_host, run_hmc_scan
 from common import save_os_level_data_for_sys, is_hmc, exec_hmc_cmd_adapt
 # Import the RemoteClient class from the sshclient file
 from sshclient import RemoteClient
+from sshclient import AuthenticationException
 # Import colorama for console colors
 from colorama import init, Fore, Back, Style
 
@@ -67,7 +67,7 @@ try:
             parser.print_help()
             sys.exit(0)
 
-    print('powercollector version 1.0.7')
+    print('powercollector version 1.0.10')
     # Create folder for output and set folder variables
     # now is an object, we turn that into a string with a format of our choosing
     today = datetime.now().strftime("%Y%m%d-%H-%M")
@@ -124,7 +124,7 @@ try:
     logger.add(output_dir + '\\' + 'powercollector-log_{time:YYYY-MM-DD}.log',
                format="{time} | {level} | {module}:{function} | {message}",
                level="INFO")
-    logger.info('powercollector version 1.0.7')
+    logger.info('powercollector version 1.0.10')
     logger.info('Base directory: ' + base_dir)
     logger.info('Output directory: ' + output_dir)
 
@@ -143,8 +143,8 @@ try:
         sys.exit(0)
     # Connect to HMC
     if not check_host(args.hmc):
-        print_red('HMC Connection error - please check log file.')
-        logger.error('HMC Connection error - please check previous messages.')
+        print_red('HMC not resolvable or doesn\'t answer to ICMP Ping - please check log file.')
+        logger.error('HMC not resolvable or doesn\'t answer to ICMP Ping - please check previous messages.')
         sys.exit(1)
     hmc = HMC()
     hmc_ssh = None
@@ -161,6 +161,12 @@ try:
 
     # The PEP manual doesn't like handling broad exceptions but since we already handle
     # the exceptions in the module what is wrong with just propagating all the way to main and exiting here?
+    except AuthenticationException as error:
+        print_red('HMC Connection error - Invalid User or Password - please check log file.')
+        if __debug__:
+            logger.exception(error)
+        logger.error('HMC Connection error - Invalid User or Password - please check previous messages.')
+        sys.exit(1)
     except Exception as error:
         print_red('HMC Connection error - please check log file.')
         if __debug__:
@@ -260,9 +266,9 @@ try:
         # temp_ecnumber_primary:temp_level_primary:temp_ecnumber_secondary:temp_level_secondary
         # :perm_ecnumber_primary:perm_level_primary:perm_ecnumber_secondary:perm_level_secondary
         try:
-            response = hmc_ssh.execute_command('lslic -t sys -m ' + system.name + ' -F temp_ecnumber_primary' +
-                                               ':temp_level_primary:perm_ecnumber_primary:perm_level_primary',
-                                               30)
+            response = hmc_ssh.execute_command('lslic -t sys -m ' + "\"" + system.name + "\"" +
+                                               ' -F temp_ecnumber_primary:temp_level_primary:' +
+                                               'perm_ecnumber_primary:perm_level_primary', 30)
             # Due to the long variable names, split the 4 variable assignment
             system.fsp_primary.temp_ecnumber, \
                 system.fsp_primary.temp_level, \
@@ -272,7 +278,8 @@ try:
             logger.error('Error obtaining primary FSP\'s data, check previous messages.')
 
         try:
-            response = hmc_ssh.execute_command('temp_ecnumber_secondary:temp_level_secondary:' +
+            response = hmc_ssh.execute_command('lslic -t sys -m ' + "\"" + system.name + "\"" +
+                                               ' -F temp_ecnumber_secondary:temp_level_secondary:' +
                                                'perm_ecnumber_secondary:perm_level_secondary', 30)
             if "unavailable" not in response:
                 system.fsp_secondary.temp_ecnumber, \
@@ -282,17 +289,18 @@ try:
         except:
             logger.error('Error obtaining secondary FSP\'s data, check previous messages.')
         # Obtain system capabilities - This fails safe, if the command doesn't exist, it'll store that response
-        response = hmc_ssh.execute_command('lssyscfg -r sys -m ' + system.name + ' -F capabilities', 30)
+        response = hmc_ssh.execute_command('lssyscfg -r sys -m ' + "\"" + system.name + "\"" + ' -F capabilities', 30)
         system.capabilities = response[0].replace('\n', '')
 
         # Obtain system state, if it's not Operating or Standby we cannot collect anything else
-        response = hmc_ssh.execute_command('lssyscfg -r sys -m ' + system.name + ' -F state', 30)
+        response = hmc_ssh.execute_command('lssyscfg -r sys -m ' + "\"" + system.name + "\"" + ' -F state', 30)
 
         if 'Operating' in response[0] or 'Standby' in response[0]:
             # Obtain IO slots
             try:
-                response = hmc_ssh.execute_command('lshwres -m ' + system.name + ' -r io --rsubtype slot -F ' +
-                                                   'feature_codes:description:unit_phys_loc:phys_loc:drc_name')
+                response = hmc_ssh.execute_command('lshwres -m ' + "\"" + system.name + "\"" +
+                                                   ' -r io --rsubtype slot -F feature_codes:description:' +
+                                                   'unit_phys_loc:phys_loc:drc_name')
                 for slot in response:
                     fc, desc, upl, pl, drcn = slot.replace('\n', '').split(':')
                     system.io_slots.append(IOSlot(feature_codes=fc, description=desc, unit_phys_loc=upl,
@@ -306,14 +314,15 @@ try:
 
             # Obtain LPAR list
             try:
-                command = 'lssyscfg -r lpar -m ' + system.name + \
+                command = 'lssyscfg -r lpar -m ' + "\"" + system.name + "\"" + \
                           ' -F lpar_id:name:lpar_env:state'
                 response = hmc_ssh.execute_command(command, 120)
                 for lpar in response:
                     l_id, l_name, l_env, running = lpar.replace('\n', '').split(':')
                     system.partition_list.append(LPAR(name=l_name, lpar_id=l_id, state=running, lpar_env=l_env))
                 for lpar in system.partition_list:
-                    command = 'lssyscfg -r lpar -m ' + system.name + ' --filter \"lpar_names=' + lpar.name + \
+                    command = 'lssyscfg -r lpar -m ' + "\"" + system.name + "\"" + \
+                              ' --filter \"lpar_names=' + lpar.name + \
                               '\" -F os_version:rmc_ipaddr --header --osrefresh'
                     response = exec_hmc_cmd_adapt(hmc_ssh, command, 120)
                     if "rmc_ipaddr" in response[0]:
@@ -330,7 +339,7 @@ try:
                             ' please check previous messages.')
             try:
                 # Obtain IO topology
-                response = hmc_ssh.execute_command('lsiotopo -m ' + system.name +
+                response = hmc_ssh.execute_command('lsiotopo -m ' + "\"" + system.name + "\"" +
                                                    ' -F slot_enclosure:leading_hub_port:trailing_hub_port', 30)
                 # Convert response to dictionary and back to list, a dictionary cannot have duplicate keys.
                 deduped_response = list(dict.fromkeys(response))
@@ -371,9 +380,9 @@ try:
         for lpar in system.partition_list:
             if "vioserver" in lpar.env and "Running" in lpar.state:
                 try:
-                    j_list = hmc_ssh.execute_command('viosvrcmd -m ' + system.name +
+                    j_list = hmc_ssh.execute_command('viosvrcmd -m ' + "\"" + system.name + "\"" +
                                                      ' --id ' + lpar.id + ' -c "errlog"')
-                    j_list += hmc_ssh.execute_command('viosvrcmd -m ' + system.name +
+                    j_list += hmc_ssh.execute_command('viosvrcmd -m ' + "\"" + system.name + "\"" +
                                                       ' --id ' + lpar.id + ' -c "errlog -ls"')
                     with open(output_dir + '\\' + system.name + '-' + lpar.name + '-ErrorLog.json', "w+") as f:
                         f.write(json.dumps(j_list, indent=4))
@@ -383,7 +392,7 @@ try:
                         logger.exception(e)
                     logger.info('Error trying to get error log from VIOS: ' + lpar.name + ' for system: ' + system.name)
                 try:
-                    j_list = hmc_ssh.execute_command('viosvrcmd -m ' + system.name +
+                    j_list = hmc_ssh.execute_command('viosvrcmd -m ' + "\"" + system.name + "\"" +
                                                      ' --id ' + lpar.id + ' -c "lsdev -vpd"')
 
                     with open(output_dir + '\\' + system.name + '-' + lpar.name + '-vpd.json', "w+") as f:
@@ -413,4 +422,3 @@ except KeyboardInterrupt:
     # Cleanup?
     logger.error('powercollector killed by ctrl-C. Output may be invalid.')
     print_red('powercollector killed by ctrl-C. Output may be invalid.')
-    pass
