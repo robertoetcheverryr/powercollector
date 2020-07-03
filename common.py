@@ -438,7 +438,7 @@ def save_lpar_os_data(lpar, oscollector, path_to_oscollector, output_path, today
                 lpar_ssh.execute_command('rm /f ' + oscollector, 60, vios=set_vios)
                 lpar_ssh.upload_file(path_to_oscollector + '\\' + oscollector)
                 lpar_ssh.execute_command('chmod 777 ' + oscollector, 30, vios=set_vios)
-                response = lpar_ssh.execute_command('./' + oscollector, 300, vios=set_vios)
+                response = lpar_ssh.execute_command('ksh ./' + oscollector, 300, vios=set_vios)
                 # Check the output to find the generated filename OR raise an alert due to the script failing.
                 old_name = None
                 for line in response:
