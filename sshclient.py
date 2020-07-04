@@ -10,7 +10,7 @@ import socket
 
 from loguru import logger
 from paramiko import SSHClient, AutoAddPolicy
-from paramiko.auth_handler import AuthenticationException
+from paramiko.auth_handler import AuthenticationException, SSHException
 from scp import SCPClient, SCPException
 
 
@@ -38,7 +38,8 @@ class RemoteClient:
                                     username=self.user,
                                     password=self.password,
                                     look_for_keys=False,
-                                    timeout=120)
+                                    timeout=120,
+                                    banner_timeout=120)
                 self.scp = SCPClient(self.client.get_transport())
             except AuthenticationException as error:
                 logger.error('Authentication failed')

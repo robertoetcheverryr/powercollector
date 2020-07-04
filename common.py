@@ -351,17 +351,26 @@ def save_lpar_os_data(lpar, oscollector, path_to_oscollector, output_path, today
         logger.info('LPAR: ' + lpar.name + ' is running IBM i, cannot run oscollector.')
         return False
     # AIX and Linux share the same "env" so if the os version is known, we can exclude Linux from collection
-    if 'Linux' in lpar.os_level:
+    elif 'Linux' in lpar.os_level:
         print_red('LPAR: ' + lpar.name + ' is running Linux, cannot run oscollector.')
         logger.info('LPAR: ' + lpar.name + ' is running Linux, cannot run oscollector.')
         return False
+    # The LPAR is AIX/Linux/VIOS, set passwords if not set
+    elif 'vioserver' in lpar.env:
+        username = username or 'padmin'
+        password = password or 'padmin'
+    else:
+        username = username or 'root'
+        password = password or 'password'
     if lpar.rmc_ip == '':
         # If the LPAR is Running but doesn't have an RMC IP Address, we cannot connect and something is
         # wrong with the LPAR.
-        print_red('LPAR: ' + lpar.name + ' is an AIX or VIOS LPAR but doesn\'t have an RMC IP address. Please '
-                                         'run oscollector manually and check rmc services.')
-        logger.error('LPAR: ' + lpar.name + ' is an AIX or VIOS LPAR but doesn\'t have an RMC IP address. '
-                                            'Please run oscollector manually and check rmc services.')
+        print_red('LPAR: ' + lpar.name + ' is running but doesn\'t have an RMC IP address. Please '
+                                         'run oscollector manually and check RMC services if' 
+                                         'this is an AIX or VIOS LPAR.')
+        logger.error('LPAR: ' + lpar.name + ' is running but doesn\'t have an RMC IP address. Please '
+                                            'run oscollector manually and check RMC services if' 
+                                            'this is an AIX or VIOS LPAR.')
         return False
     if not check_host(lpar.rmc_ip):
         # If the rmc_ip is unreachable, something is wrong at the networking level
@@ -371,13 +380,6 @@ def save_lpar_os_data(lpar, oscollector, path_to_oscollector, output_path, today
         logger.error('Error during connection to LPAR: ' + lpar.name + ', please check log file and run '
                                                                        'oscollector manually')
         return False
-    # If no user/pass were provided, set defaults.
-    if 'vioserver' in lpar.env:
-        username = username or 'padmin'
-        password = password or 'padmin'
-    else:
-        username = username or 'root'
-        password = password or 'password'
     for attempt in range(5):
         print('Please input username and password or press enter to use the proposed value.')
         # Ask for input, if the input is empty, use the current value
@@ -438,7 +440,7 @@ def save_lpar_os_data(lpar, oscollector, path_to_oscollector, output_path, today
                 lpar_ssh.execute_command('rm /f ' + oscollector, 60, vios=set_vios)
                 lpar_ssh.upload_file(path_to_oscollector + '\\' + oscollector)
                 lpar_ssh.execute_command('chmod 777 ' + oscollector, 30, vios=set_vios)
-                response = lpar_ssh.execute_command('ksh ./' + oscollector, 300, vios=set_vios)
+                response = lpar_ssh.execute_command('ksh ./' + oscollector, 900, vios=set_vios)
                 # Check the output to find the generated filename OR raise an alert due to the script failing.
                 old_name = None
                 for line in response:
@@ -455,7 +457,7 @@ def save_lpar_os_data(lpar, oscollector, path_to_oscollector, output_path, today
                         ', please check previous messages and run oscollector manually on the LPAR.')
                     return False
                 # Rename and download the file.
-                lpar_ssh.execute_command('mv ' + old_name + ' ' + output_file + '.tar', 30,
+                lpar_ssh.execute_command('mv ' + old_name + ' ' + output_file + '.tar', 60,
                                          want_errors=True, vios=set_vios)
                 old_name = old_name.replace('.tar', '')
                 lpar_ssh.download_file(output_file + '.tar', output_path)
