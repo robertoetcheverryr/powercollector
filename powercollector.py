@@ -3,7 +3,7 @@
 # * This program collects HMC, Managed System, LPAR and OS data from         *
 # * IBM Power systems.                                                       *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.10 2020/06/12                                                   *
+# * Ver: 1.0.11 2020/07/04                                                   *
 # ****************************************************************************
 # TODO Check for root or padmin when loggin into LPAR
 # Import argparse and path to parse command line arguments and use path utilities
@@ -67,7 +67,7 @@ try:
             parser.print_help()
             sys.exit(0)
 
-    print('powercollector version 1.0.10')
+    print('powercollector version 1.0.11')
     # Create folder for output and set folder variables
     # now is an object, we turn that into a string with a format of our choosing
     today = datetime.now().strftime("%Y%m%d-%H-%M")
@@ -124,7 +124,7 @@ try:
     logger.add(output_dir + '\\' + 'powercollector-log_{time:YYYY-MM-DD}.log',
                format="{time} | {level} | {module}:{function} | {message}",
                level="INFO")
-    logger.info('powercollector version 1.0.10')
+    logger.info('powercollector version 1.0.11')
     logger.info('Base directory: ' + base_dir)
     logger.info('Output directory: ' + output_dir)
 

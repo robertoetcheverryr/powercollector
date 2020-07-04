@@ -1,3 +1,8 @@
+# v1.0.11 - 04/07/2020
+
+- Fixed oscollector execution when remote shell is not KSH
+- Changed various timeouts to be more flexible with slow systems 
+
 # v1.0.10 - 12/06/2020
 
 - Fixed behaviour when system or LPAR contains spaces
