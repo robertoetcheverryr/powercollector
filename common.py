@@ -2,7 +2,7 @@
 # * powercollector.common                                                    *
 # * Module for common classes and functions                                  *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.11 2020/07/04                                                   *
+# * Ver: 1.0.12 2020/12/06                                                   *
 # ****************************************************************************
 
 # Import logger for the main log file
@@ -182,7 +182,11 @@ def print_red(text):
 
 def check_java():
     # Check for java and return the output
-    outputs = subprocess.run('java -version', capture_output=True, text=True)
+    try:
+        outputs = subprocess.run('java -version', capture_output=True, text=True)
+    except FileNotFoundError:
+        return False
+    # TODO do we need to check for an specific Java version?
     regex = re.compile(' version.".*"', re.IGNORECASE)
     result = regex.search(str(outputs.stderr))
     if not result:

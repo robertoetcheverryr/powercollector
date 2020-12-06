@@ -3,9 +3,9 @@
 # * This program collects HMC, Managed System, LPAR and OS data from         *
 # * IBM Power systems.                                                       *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.11 2020/07/04                                                   *
+# * Ver: 1.0.12 2020/12/06                                                   *
 # ****************************************************************************
-# TODO Check for root or padmin when loggin into LPAR
+# TODO Check for root or padmin into LPAR
 # Import argparse and path to parse command line arguments and use path utilities
 import argparse
 # Import JSON to output json files
@@ -223,6 +223,7 @@ try:
         # Since somewhere between V7R7.7 and V7.7.9 the analyzing_mtms parameter appeared...
         # just check the output and retry without that parameter...
         # look for: An invalid attribute was entered. and remove it
+        # TODO add failing_mtms? sys_mtms? enclosure_mtms?
         cmd = 'lssvcevents -t hardware --filter "status=open" -F refcode:first_time:last_time:sys_name:' \
               'text:analyzing_mtms:ref_code_extn:sys_refcode:fru_details --header'
         j_list = exec_hmc_cmd_adapt(hmc_ssh, cmd, 120)

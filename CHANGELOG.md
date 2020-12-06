@@ -1,3 +1,7 @@
+# v1.0.12 - 06/12/2020
+
+- Fixed bug in Java detection
+
 # v1.0.11 - 04/07/2020
 
 - Fixed oscollector execution when remote shell is not KSH

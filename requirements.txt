@@ -1,6 +1,6 @@
-setuptools>=49.1.0
-loguru>=0.5.1
-paramiko>=2.7.1
+setuptools>=50.3.2
+loguru>=0.5.3
+paramiko>=2.7.2
 jsonizable>=1.0.4
-scp>=0.13.2
-colorama>=0.4.3
+scp>=0.13.3
+colorama>=0.4.4
