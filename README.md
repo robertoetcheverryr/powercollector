@@ -16,11 +16,13 @@ __Guide:__
 ## Pre-requisites
 
 To use the full functionality of powercollector you need:
-* Any modern Java JRE installed (e.g. https://adoptopenjdk.net)
+* Any modern Java JRE installed or bundled with powercollector (e.g. https://adoptopenjdk.net)
 * HMC Scanner files (http://ibm.biz/hmcScanner)
 * oscollector.v.1.0.ksh or greater
 
 Place the HMC Scanner in a folder called HMCScanner and oscollector.vX.x.ksh in the same folder as powercollector.exe
+
+If using a bundled Java JRE, make sure it is placed in a `jre` folder in the same folder as powercollector.exe
 
 ## Quickstart
 
