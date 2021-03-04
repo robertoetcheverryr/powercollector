@@ -3,7 +3,7 @@
 # * Module for ssh classes and functions, based on code from:                *
 # * Hackers and Slackers                                                     *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.12 2020/12/06                                                   *
+# * Ver: 1.0.13 2020/03/04                                                   *
 # ****************************************************************************
 
 import socket

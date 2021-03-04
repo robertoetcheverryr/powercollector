@@ -3,7 +3,7 @@
 # * This program collects HMC, Managed System, LPAR and OS data from         *
 # * IBM Power systems.                                                       *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.12 2020/12/06                                                   *
+# * Ver: 1.0.13 2020/03/04                                                   *
 # ****************************************************************************
 # TODO Check for root or padmin into LPAR
 # Import argparse and path to parse command line arguments and use path utilities
@@ -67,7 +67,7 @@ try:
             parser.print_help()
             sys.exit(0)
 
-    print('powercollector version 1.0.11')
+    print('powercollector version 1.0.13')
     # Create folder for output and set folder variables
     # now is an object, we turn that into a string with a format of our choosing
     today = datetime.now().strftime("%Y%m%d-%H-%M")
@@ -124,7 +124,7 @@ try:
     logger.add(output_dir + '\\' + 'powercollector-log_{time:YYYY-MM-DD}.log',
                format="{time} | {level} | {module}:{function} | {message}",
                level="INFO")
-    logger.info('powercollector version 1.0.11')
+    logger.info('powercollector version 1.0.13')
     logger.info('Base directory: ' + base_dir)
     logger.info('Output directory: ' + output_dir)
 
@@ -371,7 +371,7 @@ try:
     if not save_hmc_data(hmc_src=args.hmc, hmc=hmc, output_dir=output_dir):
         # If the data saving fails for any reason, abort.
         sys.exit(1)
-    if not run_hmc_scan(hmc_scan_path=hmc_scan_path, hmc=args.hmc, user=args.user,
+    if not run_hmc_scan(hmc_scan_path=hmc_scan_path, base_dir=base_dir, hmc=args.hmc, user=args.user,
                         password=args.password, output_path=output_dir):
         print_red('HMC Scanner run was aborted. Please check the log file and run it manually')
         logger.error('HMC Scanner run was aborted. Please check previous messages and run it manually')

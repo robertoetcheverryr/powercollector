@@ -2,7 +2,7 @@
 # * powercollector.common                                                    *
 # * Module for common classes and functions                                  *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.12 2020/12/06                                                   *
+# * Ver: 1.0.13 2020/03/04                                                   *
 # ****************************************************************************
 
 # Import logger for the main log file
@@ -180,8 +180,23 @@ def print_red(text):
     print(f"\033[91m{text}\033[00m")
 
 
-def check_java():
-    # Check for java and return the output
+def check_java(base_dir):
+    # Check for bundled Java or fallback to installed
+    java = None
+    regex = re.compile(r'.*jre')
+    # Search the base_dir for the jre directory
+    for file in os.listdir(base_dir):
+        if regex.search(file):
+            try:
+                # Search the JRE directory for the Java exe and return it
+                if os.path.exists(file + '\\bin\\' + 'java.exe'):
+                    java = base_dir + "\\" + file + '\\bin\\' + 'java.exe'
+                outputs = subprocess.run(java + ' -version', capture_output=True, text=True)
+                logger.info(f'Bundled Java is available: {outputs.stderr}')
+                return java
+            except FileNotFoundError:
+                continue
+    # If the Bundled search fails, check the system version
     try:
         outputs = subprocess.run('java -version', capture_output=True, text=True)
     except FileNotFoundError:
@@ -192,7 +207,10 @@ def check_java():
     if not result:
         return False
     else:
-        return result.string
+        if result.group(0) < " version \"1.6":
+            logger.info(f'Default System Java is not compatible: {result.string}')
+        logger.info(f'System Java is available: {result.string}')
+        return "java"
 
 
 def save_hmc_data(hmc_src, hmc, output_dir):
@@ -516,15 +534,14 @@ def is_hmc(hmc):
         raise e
 
 
-def run_hmc_scan(hmc_scan_path, hmc, user, password, output_path):
+def run_hmc_scan(hmc_scan_path, base_dir, hmc, user, password, output_path):
     # Check that the supplied path exists AND JAVA is installed
     if not os.path.exists(hmc_scan_path + '\\' + 'hmcScanner.jar'):
         logger.error('Missing HMC Scanner files, aborting HMC Scanner invocation.')
         return False
-    java = check_java()
+    java = check_java(base_dir)
     if java:
-        logger.info(f'Java is available: {java}')
-        hmc_scanner_command = 'java -Duser.language=en -cp "' + hmc_scan_path + '\\' + 'jsch-0.1.55.jar";"' + \
+        hmc_scanner_command = java + ' -Duser.language=en -cp "' + hmc_scan_path + '\\' + 'jsch-0.1.55.jar";"' + \
                               hmc_scan_path + '\\' + 'hmcScanner.jar";"' + hmc_scan_path + '\\' + \
                               'jxl.jar" hmcScanner.Loader ' + hmc + ' ' + user + ' -p ' + \
                               password + ' -dir "' + output_path + '"'

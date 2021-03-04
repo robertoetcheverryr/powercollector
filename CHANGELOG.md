@@ -1,3 +1,7 @@
+# v1.0.13 - 04/03/2021
+
+- Bundled AdoptOpenJDK Java and updated Java detection routines
+
 # v1.0.12 - 06/12/2020
 
 - Fixed bug in Java detection
