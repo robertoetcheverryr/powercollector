@@ -3,7 +3,7 @@
 # * This program collects HMC, Managed System, LPAR and OS data from         *
 # * IBM Power systems.                                                       *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.13 2020/03/04                                                   *
+# * Ver: 1.0.14 2020/04/19                                                   *
 # ****************************************************************************
 # TODO Check for root or padmin into LPAR
 # Import argparse and path to parse command line arguments and use path utilities
@@ -25,8 +25,7 @@ from common import HMC, ManagedSystem, IOSlot, EnclosureTopology, LPAR, print_re
 from common import read_hmc_data, save_hmc_data, check_host, run_hmc_scan
 from common import save_os_level_data_for_sys, is_hmc, exec_hmc_cmd_adapt
 # Import the RemoteClient class from the sshclient file
-from sshclient import RemoteClient
-from sshclient import AuthenticationException
+from sshclient import RemoteClient, AuthenticationException
 # Import colorama for console colors
 from colorama import init, Fore, Back, Style
 
@@ -67,7 +66,7 @@ try:
             parser.print_help()
             sys.exit(0)
 
-    print('powercollector version 1.0.13')
+    print('powercollector version 1.0.14')
     # Create folder for output and set folder variables
     # now is an object, we turn that into a string with a format of our choosing
     today = datetime.now().strftime("%Y%m%d-%H-%M")
@@ -123,8 +122,9 @@ try:
     print('Output directory: ' + output_dir)
     logger.add(output_dir + '\\' + 'powercollector-log_{time:YYYY-MM-DD}.log',
                format="{time} | {level} | {module}:{function} | {message}",
-               level="INFO")
-    logger.info('powercollector version 1.0.13')
+               level="INFO",
+               encoding="utf8")
+    logger.info('powercollector version 1.0.14')
     logger.info('Base directory: ' + base_dir)
     logger.info('Output directory: ' + output_dir)
 
@@ -187,6 +187,10 @@ try:
         print_red('HMC VPD Collection incomplete. Please check the log file.')
         logger.error('HMC VPD Collection incomplete. Please check previous messages.')
     try:
+        # TODO new JSON format, format versioning to avoid problems if the webservice is implemented
+        # TODO add fix data to JSON file, currently only available by viewing the log
+        # Run the -V option to obtain fix data
+        hmc_ssh.execute_command('lshmc -V', 10)
         # Obtain HMC VPD and populate remaining fields
         response = hmc_ssh.execute_command('lshmc -v', 10)
         for line in response:

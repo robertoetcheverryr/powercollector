@@ -2,7 +2,7 @@
 # * powercollector.common                                                    *
 # * Module for common classes and functions                                  *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.13 2020/03/04                                                   *
+# * Ver: 1.0.14 2020/04/19                                                   *
 # ****************************************************************************
 
 # Import logger for the main log file

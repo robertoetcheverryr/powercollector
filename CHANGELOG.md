@@ -1,3 +1,8 @@
+# v1.0.14 - 19/04/2021
+
+- Minor fixes on exception handling
+- Added HMC fix information to collected data
+
 # v1.0.13 - 04/03/2021
 
 - Bundled AdoptOpenJDK Java and updated Java detection routines

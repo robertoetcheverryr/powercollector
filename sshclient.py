@@ -3,14 +3,14 @@
 # * Module for ssh classes and functions, based on code from:                *
 # * Hackers and Slackers                                                     *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.13 2020/03/04                                                   *
+# * Ver: 1.0.14 2020/04/19                                                   *
 # ****************************************************************************
 
 import socket
 
 from loguru import logger
 from paramiko import SSHClient, AutoAddPolicy
-from paramiko.auth_handler import AuthenticationException, SSHException
+from paramiko.ssh_exception import AuthenticationException, SSHException
 from scp import SCPClient, SCPException
 
 
