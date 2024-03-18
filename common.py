@@ -545,10 +545,13 @@ def run_hmc_scan(hmc_scan_path, base_dir, hmc, user, password, output_path):
         return False
     java = check_java(base_dir)
     if java:
-        hmc_scanner_command = java + ' -Duser.language=en -cp "' + hmc_scan_path + '\\' + 'jsch-0.1.55.jar";"' + \
-                              hmc_scan_path + '\\' + 'hmcScanner.jar";"' + hmc_scan_path + '\\' + \
-                              'jxl.jar" hmcScanner.Loader ' + hmc + ' ' + user + ' -p ' + \
-                              password + ' -dir "' + output_path + '"'
+        hmc_scanner_command = java + (f' -Xmx1024m -Duser.language=en '
+                                      f'-Djava.util.logging.config.file="{hmc_scan_path}\\hmcScanner.properties" '
+                                      f'-cp "{hmc_scan_path}\\bcprov-jdk15on-1.69.jar";'
+                                      f'"{hmc_scan_path}\\jsch-0.1.67.jar";'
+                                      f'"{hmc_scan_path}\\hmcScanner.jar";'
+                                      f'"{hmc_scan_path}\\jxl.jar" hmcScanner.Loader ') + hmc + ' ' + user + ' -p ' + \
+                              password + ' -dir "' + output_path + '"' + " -html"
         logger.info('| Calling HMC Scanner: ' + hmc_scanner_command)
         subprocess.run(hmc_scanner_command)
         return True

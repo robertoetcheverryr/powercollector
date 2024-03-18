@@ -68,7 +68,7 @@ try:
             parser.print_help()
             sys.exit(0)
 
-    print('powercollector version 1.0.14')
+    print('powercollector version 1.0.15')
     # Create folder for output and set folder variables
     # now is an object, we turn that into a string with a format of our choosing
     today = datetime.now().strftime("%Y%m%d-%H-%M")
@@ -126,7 +126,7 @@ try:
                format="{time} | {level} | {module}:{function} | {message}",
                level="INFO",
                encoding="utf8")
-    logger.info('powercollector version 1.0.14')
+    logger.info('powercollector version 1.0.15')
     logger.info('Base directory: ' + base_dir)
     logger.info('Output directory: ' + output_dir)
 
