@@ -1,3 +1,8 @@
+# v1.0.15 - 18/03/2024
+
+- Bumped Python version to 3.12.2, UPX to 4.22, Semeru 8 Runtimes, HMC scanner, other dependencies
+- Minor fixed on exception handling
+
 # v1.0.14 - 19/04/2021
 
 - Minor fixes on exception handling
