@@ -2,30 +2,34 @@
 # * powercollector.common                                                    *
 # * Module for common classes and functions                                  *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.14 2020/04/19                                                   *
+# * Ver: 1.0.15 2024/03/18                                                   *
 # ****************************************************************************
 
-# Import logger for the main log file
-from loguru import logger
-# Import subprocess to run external processes
-import subprocess
+# Import copy to deepcopy modules
+import copy
+import json
 # Import os to use file functions
 import os
-# Import Jsonizable to store and read the data
-from jsonizable import Jsonizable
-import json
 # Import re to work with regular expressions
 import re
 # Import socket to do low-level networking
 import socket
+# Import subprocess to run external processes
+import subprocess
+
+# Import Jsonizable to store and read the data
+from jsonizable import Jsonizable
+# Import logger for the main log file
+from loguru import logger
 # Import the RemoteClient class from the sshclient file
 from paramiko import AuthenticationException
+
 # Import the RemoteClient to connect to HMC and LPAR
 from sshclient import RemoteClient
-# Import copy to deepcopy modules
-import copy
 
 
+##TODO add __str__ method to each class
+##TODO add class methods?
 # Define LPAR class
 # We inherit form Jsonizable, to have the ability to read and write json, the subclass Meta has a dictionary of
 # how the LPAR class will be read or written

@@ -3,7 +3,7 @@
 # * This program collects HMC, Managed System, LPAR and OS data from         *
 # * IBM Power systems.                                                       *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.14 2020/04/19                                                   *
+# * Ver: 1.0.15 2024/03/18                                                   *
 # ****************************************************************************
 # TODO Check for root or padmin into LPAR
 # Import argparse and path to parse command line arguments and use path utilities
@@ -18,16 +18,18 @@ import sys
 from datetime import datetime
 # Import pathlib to work with paths
 from pathlib import Path
+
+# Import colorama for console colors
+from colorama import init
 # Import logger for the main log file
 from loguru import logger
+
 # Import common classes and functions from common.py
 from common import HMC, ManagedSystem, IOSlot, EnclosureTopology, LPAR, print_red
 from common import read_hmc_data, save_hmc_data, check_host, run_hmc_scan
 from common import save_os_level_data_for_sys, is_hmc, exec_hmc_cmd_adapt
 # Import the RemoteClient class from the sshclient file
 from sshclient import RemoteClient, AuthenticationException
-# Import colorama for console colors
-from colorama import init, Fore, Back, Style
 
 # Program START!
 try:
@@ -391,7 +393,7 @@ try:
                                                       ' --id ' + lpar.id + ' -c "errlog -ls"')
                     with open(output_dir + '\\' + system.name + '-' + lpar.name + '-ErrorLog.json', "w+") as f:
                         f.write(json.dumps(j_list, indent=4))
-                except:
+                except Exception as e:
                     print_red('Error trying to get error log from VIOS: ' + lpar.name + ' for system: ' + system.name)
                     if __debug__:
                         logger.exception(e)
@@ -402,7 +404,7 @@ try:
 
                     with open(output_dir + '\\' + system.name + '-' + lpar.name + '-vpd.json', "w+") as f:
                         f.write(json.dumps(j_list, indent=4))
-                except:
+                except Exception as e:
                     print_red('Error trying to get VPD from VIOS: ' + lpar.name + ' for system: ' + system.name)
                     if __debug__:
                         logger.exception(e)

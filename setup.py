@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='powercollector',
-    version='1.0.14',
+    version='1.0.15',
     packages=['venv'],
     url='',
     license='',
