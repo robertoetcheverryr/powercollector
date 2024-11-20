@@ -1,3 +1,9 @@
+# v1.0.16 - 19/11/2024
+- Updated most of the packages
+- Added workaround for Paramiko's new behavior against old SSH servers
+- Bumped Semeru runtime
+- Added date check
+
 # v1.0.15 - 18/03/2024
 
 - Bumped Python version to 3.12.2, UPX to 4.22, Semeru 8 Runtimes, HMC scanner, other dependencies

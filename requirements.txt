@@ -4,3 +4,4 @@ paramiko>=3.4.0
 jsonizable>=1.0.4
 scp>=0.14.5
 colorama>=0.4.6
+ntplib==0.4.0

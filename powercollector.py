@@ -3,7 +3,7 @@
 # * This program collects HMC, Managed System, LPAR and OS data from         *
 # * IBM Power systems.                                                       *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.15 2024/03/18                                                   *
+# * Ver: 1.0.16 2024/11/19                                                   *
 # ****************************************************************************
 # TODO Check for root or padmin into LPAR
 # Import argparse and path to parse command line arguments and use path utilities
@@ -27,6 +27,9 @@ from datetime import datetime
 # Import pathlib to work with paths
 from pathlib import Path
 
+# ntplib to work with dates
+import ntplib
+
 # Import colorama for console colors
 from colorama import init
 
@@ -40,6 +43,7 @@ from common import save_os_level_data_for_sys, is_hmc, exec_hmc_cmd_adapt
 
 # Import the RemoteClient class from the sshclient file
 from sshclient import RemoteClient, AuthenticationException
+
 
 # Program START!
 try:
@@ -58,16 +62,32 @@ try:
     )
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
-        "--hmc", metavar="hmc00", type=str, help="HMC Hostname or IP Address."
+        "--hmc",
+        metavar="hmc00",
+        type=str,
+        help="HMC Hostname or IP Address.",
     )
-    parser.add_argument("--user", metavar="hscroot", type=str, help="HMC Username.")
-    parser.add_argument("--password", metavar="abc123", type=str, help="HMC Password.")
+    parser.add_argument(
+        "-u",
+        "--user",
+        metavar="hscroot",
+        type=str,
+        help="HMC Username.",
+    )
+    parser.add_argument(
+        "-p",
+        "--password",
+        metavar="abc123",
+        type=str,
+        help="HMC Password.",
+    )
     parser.add_argument(
         "--hmconly",
         action="store_true",
         help="Collect HMC and Managed Systems information only.",
     )
     group.add_argument(
+        "-i",
         "--input",
         metavar="Path",
         type=Path,
@@ -83,6 +103,7 @@ try:
         "HMCScanner in the current directory",
     )
     parser.add_argument(
+        "-o",
         "--output",
         metavar="Path",
         type=Path,
@@ -101,7 +122,7 @@ try:
             parser.print_help()
             sys.exit(0)
 
-    print("powercollector version 1.0.15")
+    print("powercollector version 1.0.16")
     # Create folder for output and set folder variables
     # now is an object, we turn that into a string with a format of our choosing
     today = datetime.now().strftime("%Y%m%d-%H-%M")
@@ -165,7 +186,35 @@ try:
         level="INFO",
         encoding="utf8",
     )
-    logger.info("powercollector version 1.0.15")
+    logger.info("powercollector version 1.0.16")
+    # Define the target date
+    target_date = datetime(2025, 3, 1)
+    build_date = datetime(2024, 11, 1)
+    # Check the system's date
+    system_date = datetime.now()
+    if system_date > target_date or system_date < build_date:
+        print_red(
+            "This program has expired. Please ask your technical support for a current version"
+        )
+        logger.error(
+            "This program has expired. Please ask your technical support for a current version"
+        )
+        sys.exit(1)
+    # Check the NTP server's date
+    try:
+        ntp_client = ntplib.NTPClient()
+        response = ntp_client.request("pool.ntp.org")
+        ntp_date = datetime.fromtimestamp(response.tx_time)
+        if ntp_date > target_date or ntp_date < build_date:
+            print_red(
+                "This program has expired. Please ask your technical support for a current version"
+            )
+            logger.error(
+                "This program has expired. Please ask your technical support for a current version"
+            )
+            sys.exit(1)
+    except Exception as e:
+        logger.info("System date seems valid but could not verify with NTP.")
     logger.info("Base directory: " + base_dir)
     logger.info("Output directory: " + output_dir)
 
@@ -654,6 +703,11 @@ try:
             "powercollector has completed successfully --hmconly. "
             "Please run oscollector manually on the LPARs if the managed system is running."
         )
+        print("Saving folder to .zip")
+        logger.info("Saving folder to .zip")
+        shutil.make_archive(args.hmc + "-" + today, "zip", output_dir)
+        logger.info("Removing temporal files")
+        shutil.rmtree(output_dir)
         sys.exit(0)
     else:
         save_os_level_data_for_sys(
@@ -664,7 +718,10 @@ try:
         )
     print("Saving folder to .zip")
     logger.info("Saving folder to .zip")
-    shutil.make_archive(args.hmc + "-" + today + ".zip", "zip", output_dir)
+    shutil.make_archive(args.hmc + "-" + today, "zip", output_dir)
+    print("Removing temporal files")
+    logger.info("Removing temporal files")
+    shutil.rmtree(output_dir)
     print("powercollector has completed successfully.")
     logger.info("powercollector has completed successfully.")
     sys.exit(0)

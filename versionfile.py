@@ -6,8 +6,8 @@ VSVersionInfo(
   ffi=FixedFileInfo(
     # filevers and prodvers should be always a tuple with four items: (1, 2, 3, 4)
     # Set not needed items to zero 0.
-    filevers=(1, 0, 15, 0),
-    prodvers=(1, 0, 15, 0),
+    filevers=(1, 0, 16, 0),
+    prodvers=(1, 0, 16, 0),
     # Contains a bitmask that specifies the valid bits 'flags'r
     mask=0x3f,
     # Contains a bitmask that specifies the Boolean attributes of the file.
@@ -31,12 +31,12 @@ VSVersionInfo(
         u'040904b0',
         [StringStruct(u'CompanyName', u'None'),
         StringStruct(u'FileDescription', u'powercollector'),
-        StringStruct(u'FileVersion', u'1.0.15'),
+        StringStruct(u'FileVersion', u'1.0.16'),
         StringStruct(u'InternalName', u'powercollector'),
         StringStruct(u'LegalCopyright', u'© 2024 Roberto Etcheverry uses code © 2020 by Hackers and Slackers'),
         StringStruct(u'OriginalFilename', u'powercollector.exe'),
         StringStruct(u'ProductName', u'powercollector'),
-        StringStruct(u'ProductVersion', u'1.0.15')])
+        StringStruct(u'ProductVersion', u'1.0.16')])
       ]),
     VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
   ]

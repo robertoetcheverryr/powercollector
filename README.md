@@ -1,4 +1,4 @@
-# powercollector v1.0.15
+# powercollector v1.0.16
 Powercollector is a tool to collect information from an IBM HMC (Hardware Management Console), it's Managed Systems, their hardware configuration, and PowerVM configuration.
 
 It features JSON formatted output for the HMC, Managed Systems, and LPAR information, it also invokes HMC Scanner to obtain additional information and a pretty Excel file.
@@ -16,9 +16,10 @@ __Guide:__
 ## Pre-requisites
 
 To use the full functionality of powercollector you need:
+* Microsoft Windows 8.1 or greater
 * Any modern Java JRE installed or bundled with powercollector (e.g. https://adoptopenjdk.net)
 * HMC Scanner files (http://ibm.biz/hmcScanner)
-* oscollector.v.1.0.ksh or greater
+* oscollector.v1.0.ksh or greater
 
 Place the HMC Scanner in a folder called HMCScanner and oscollector.vX.x.ksh in the same folder as powercollector.exe
 

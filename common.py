@@ -2,7 +2,7 @@
 # * powercollector.common                                                    *
 # * Module for common classes and functions                                  *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.15 2024/03/18                                                   *
+# * Ver: 1.0.16 2024/11/19                                                   *
 # ****************************************************************************
 
 # Import copy to deepcopy modules
@@ -256,7 +256,8 @@ def check_java(base_dir):
                 )
                 logger.info(f"Bundled Java is available: {outputs.stderr}")
                 return java
-            except FileNotFoundError:
+            except (FileNotFoundError, TypeError) as e:
+                logger.info(f"Tried {file} but got an error: {e}")
                 continue
     # If the Bundled search fails, check the system version
     try:

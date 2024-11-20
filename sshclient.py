@@ -3,7 +3,7 @@
 # * Module for ssh classes and functions, based on code from:                *
 # * Hackers and Slackers                                                     *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.15 2024/03/18                                                   *
+# * Ver: 1.0.16 2024/11/19                                                   *
 # ****************************************************************************
 
 import socket
@@ -34,17 +34,31 @@ class RemoteClient:
                 self.client = SSHClient()
                 self.client.load_system_host_keys()
                 self.client.set_missing_host_key_policy(AutoAddPolicy())
-                self.client.connect(
-                    self.host,
-                    username=self.user,
-                    password=self.password,
-                    look_for_keys=False,
-                    timeout=120,
-                    banner_timeout=120,
-                )
+                try:
+                    self.client.connect(
+                        self.host,
+                        username=self.user,
+                        password=self.password,
+                        look_for_keys=False,
+                        timeout=120,
+                        banner_timeout=120,
+                    )
+                except AuthenticationException as error:
+                    logger.error(
+                        "Authentication failed or older SSH server detected. Retrying with SHA2 disabled."
+                    )
+                    self.client.connect(
+                        self.host,
+                        username=self.user,
+                        password=self.password,
+                        look_for_keys=False,
+                        timeout=120,
+                        banner_timeout=120,
+                        disabled_algorithms={"keys": ["rsa-sha2-256", "rsa-sha2-512"]},
+                    )
                 self.scp = SCPClient(self.client.get_transport())
             except AuthenticationException as error:
-                logger.error("Authentication failed")
+                logger.error(f"Authentication failed: {error}")
                 if __debug__:
                     logger.exception(error)
                 raise error
@@ -59,7 +73,7 @@ class RemoteClient:
                     logger.exception(error)
                 raise error
             except Exception as error:
-                logger.exception("Unexpected error during connection:" + error)
+                logger.exception("Unexpected error during connection:" + str(error))
                 raise error
         return self.client
 
@@ -82,7 +96,7 @@ class RemoteClient:
         else:
             logger.info(f"Uploaded {file} to {self.remote_path}")
 
-    def download_file(self, file, path="."):
+    def download_file(self, file, path=".") -> None:
         # Download file from remote host.
         try:
             self.conn = self._connect()
