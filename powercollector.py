@@ -3,7 +3,7 @@
 # * This program collects HMC, Managed System, LPAR and OS data from         *
 # * IBM Power systems.                                                       *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.16 2024/11/19                                                   *
+# * Ver: 1.0.17 2024/12/05                                                   *
 # ****************************************************************************
 # TODO Check for root or padmin into LPAR
 # Import argparse and path to parse command line arguments and use path utilities
@@ -86,6 +86,11 @@ try:
         action="store_true",
         help="Collect HMC and Managed Systems information only.",
     )
+    parser.add_argument(
+        "--viosonly",
+        action="store_true",
+        help="Collect HMC and Managed Systems and VIOS OScollector information only.",
+    )
     group.add_argument(
         "-i",
         "--input",
@@ -122,7 +127,7 @@ try:
             parser.print_help()
             sys.exit(0)
 
-    print("powercollector version 1.0.16")
+    print("powercollector version 1.0.17")
     # Create folder for output and set folder variables
     # now is an object, we turn that into a string with a format of our choosing
     today = datetime.now().strftime("%Y%m%d-%H-%M")
@@ -180,16 +185,16 @@ try:
     # logger.add(sys.stderr, level="ERROR")
     print("Base directory: " + base_dir)
     print("Output directory: " + output_dir)
-    logger.add(
+    log_instance = logger.add(
         output_dir + "\\" + "powercollector-log_{time:YYYY-MM-DD}.log",
         format="{time} | {level} | {module}:{function} | {message}",
         level="INFO",
         encoding="utf8",
     )
-    logger.info("powercollector version 1.0.16")
+    logger.info("powercollector version 1.0.17")
     # Define the target date
     target_date = datetime(2025, 3, 1)
-    build_date = datetime(2024, 11, 1)
+    build_date = datetime(2024, 12, 5)
     # Check the system's date
     system_date = datetime.now()
     if system_date > target_date or system_date < build_date:
@@ -709,6 +714,14 @@ try:
         logger.info("Removing temporal files")
         shutil.rmtree(output_dir)
         sys.exit(0)
+    elif args.viosonly:
+        save_os_level_data_for_sys(
+            managed_systems=hmc.managed_systems,
+            base_dir=base_dir,
+            output_dir=output_dir,
+            today=today,
+            lpar_env="vioserver",
+        )
     else:
         save_os_level_data_for_sys(
             managed_systems=hmc.managed_systems,
@@ -717,13 +730,13 @@ try:
             today=today,
         )
     print("Saving folder to .zip")
+    logger.info("powercollector has completed successfully.")
     logger.info("Saving folder to .zip")
     shutil.make_archive(args.hmc + "-" + today, "zip", output_dir)
     print("Removing temporal files")
-    logger.info("Removing temporal files")
+    logger.remove(log_instance)
     shutil.rmtree(output_dir)
     print("powercollector has completed successfully.")
-    logger.info("powercollector has completed successfully.")
     sys.exit(0)
 
 except KeyboardInterrupt:

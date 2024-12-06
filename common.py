@@ -2,7 +2,7 @@
 # * powercollector.common                                                    *
 # * Module for common classes and functions                                  *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.16 2024/11/19                                                   *
+# * Ver: 1.0.17 2024/12/05                                                   *
 # ****************************************************************************
 
 # Import copy to deepcopy modules
@@ -346,7 +346,7 @@ def check_host(hostname):
 
 
 def save_os_level_data_for_sys(
-    managed_systems, base_dir, output_dir, today, oscollector_path=None
+    managed_systems, base_dir, output_dir, today, oscollector_path=None, lpar_env=None
 ):
     # Connect to each partition to run the collection script
     print("LPAR OS-level collection started.")
@@ -363,6 +363,10 @@ def save_os_level_data_for_sys(
         print("LPAR OS-level collection for System: " + system.name + " started.")
         logger.info("LPAR OS-level collection for System: " + system.name + " started.")
         for lpar in system.partition_list:
+            if lpar_env and lpar_env not in lpar.env:
+                print(f"LPAR: {lpar.name} skipped due to {lpar_env} filter.")
+                logger.info(f"LPAR: {lpar.name} skipped due to {lpar_env} filter.")
+                continue
             print("LPAR: " + lpar.name + "'s OS-level collection started.")
             logger.info("LPAR: " + lpar.name + "'s OS-level collection started.")
             if not save_lpar_os_data(

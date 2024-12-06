@@ -3,7 +3,7 @@
 # * Module for ssh classes and functions, based on code from:                *
 # * Hackers and Slackers                                                     *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.16 2024/11/19                                                   *
+# * Ver: 1.0.17 2024/12/05                                                   *
 # ****************************************************************************
 
 import socket
@@ -44,6 +44,9 @@ class RemoteClient:
                         banner_timeout=120,
                     )
                 except AuthenticationException as error:
+                    print(
+                        "Authentication failed or older SSH server detected. Retrying with SHA2 disabled."
+                    )
                     logger.error(
                         "Authentication failed or older SSH server detected. Retrying with SHA2 disabled."
                     )
@@ -52,8 +55,8 @@ class RemoteClient:
                         username=self.user,
                         password=self.password,
                         look_for_keys=False,
-                        timeout=120,
-                        banner_timeout=120,
+                        timeout=240,
+                        banner_timeout=240,
                         disabled_algorithms={"keys": ["rsa-sha2-256", "rsa-sha2-512"]},
                     )
                 self.scp = SCPClient(self.client.get_transport())
