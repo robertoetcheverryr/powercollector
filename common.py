@@ -2,7 +2,7 @@
 # * powercollector.common                                                    *
 # * Module for common classes and functions                                  *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.17 2024/12/05                                                   *
+# * Ver: 1.0.18 2025/01/25                                                   *
 # ****************************************************************************
 
 # Import copy to deepcopy modules

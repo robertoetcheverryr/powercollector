@@ -3,7 +3,7 @@
 # * This program collects HMC, Managed System, LPAR and OS data from         *
 # * IBM Power systems.                                                       *
 # * Author: Roberto Etcheverry (retcheverry@roer.com.ar)                     *
-# * Ver: 1.0.17 2024/12/05                                                   *
+# * Ver: 1.0.18 2025/01/25                                                   *
 # ****************************************************************************
 # TODO Check for root or padmin into LPAR
 # Import argparse and path to parse command line arguments and use path utilities
@@ -47,6 +47,7 @@ from sshclient import RemoteClient, AuthenticationException
 
 # Program START!
 try:
+    PCVERSION = "1.0.18"
     # Colorama initialization
     init()
     # Firstly, disable logger, we'll only have console output until output_dir is defined.
@@ -127,7 +128,7 @@ try:
             parser.print_help()
             sys.exit(0)
 
-    print("powercollector version 1.0.17")
+    print(f"powercollector version {PCVERSION}")
     # Create folder for output and set folder variables
     # now is an object, we turn that into a string with a format of our choosing
     today = datetime.now().strftime("%Y%m%d-%H-%M")
@@ -191,10 +192,10 @@ try:
         level="INFO",
         encoding="utf8",
     )
-    logger.info("powercollector version 1.0.17")
+    logger.info(f"powercollector version {PCVERSION}")
     # Define the target date
-    target_date = datetime(2025, 3, 1)
-    build_date = datetime(2024, 12, 5)
+    target_date = datetime(2025, 6, 1)
+    build_date = datetime(2025, 1, 26)
     # Check the system's date
     system_date = datetime.now()
     if system_date > target_date or system_date < build_date:
